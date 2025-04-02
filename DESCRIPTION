@@ -1,0 +1,18 @@
+Package: SparsePortfolioSelection
+Title: Risk Reduction via Sparse Portfolio Selection
+Version: 0.0.0.9000
+Authors@R: 
+    person("Alberto", "Quaini", , "alberto91quaini@gmail.com", role = c("aut", "cre"))
+Description: Replication codes for the paper ``Risk Reduction via Sparse Portfolio Selection".
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+LinkingTo: 
+    Rcpp,
+    RcppArmadillo
+Imports: 
+    Rcpp
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

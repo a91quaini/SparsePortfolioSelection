@@ -1,0 +1,63 @@
+#-------------------------------------------------------------------------------
+#  R-specific ignores
+#-------------------------------------------------------------------------------
+
+.Rhistory
+.RData
+.Ruserdata
+
+# RStudio project files
+.Rproj.user/
+.Rproj
+.Rhistory
+.RData
+
+# Produced package tarball
+*.tar.gz
+
+# R CMD check artifacts
+*.Rcheck/
+
+# PDF manuals or vignettes (if you generate them locally and don't track them)
+*.pdf
+
+# pkgdown docs (if you prefer not to commit them; if you use GitHub Pages from /docs, you might want them in GitHub, so remove if needed)
+docs/
+
+#-------------------------------------------------------------------------------
+#  OS / Editor / Tooling
+#-------------------------------------------------------------------------------
+
+.DS_Store   # macOS
+Thumbs.db   # Windows
+
+# VSCode settings
+.vscode/
+
+# Python or other environment files (if you use them)
+.venv/
+env/
+*.pyc
+
+#-------------------------------------------------------------------------------
+#  C/C++ build artifacts
+#-------------------------------------------------------------------------------
+
+src/*.o
+src/*.so
+src/*.dll
+src/*.dSYM
+src/*.gcda
+src/*.gcno
+src/*.gcov
+
+#-------------------------------------------------------------------------------
+#  Misc
+#-------------------------------------------------------------------------------
+
+# If you create coverage reports with covr or similar
+coverage/
+.covr/
+
+# roxygen2 “junk” or partial files, if any
+.Rbuildignore
