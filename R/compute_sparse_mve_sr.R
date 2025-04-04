@@ -24,7 +24,11 @@
 #'                   0.002, 0.02, 0.0015, 0.001,
 #'                   0.001, 0.0015, 0.015, 0.0007,
 #'                   0.0005, 0.001, 0.0007, 0.012), nrow = 4, byrow = TRUE)
-#' result <- compute_sparse_mve_sr(mu = mu, sigma = sigma, max_card = 2, greedy_perc = 1.0, do_checks = TRUE)
+#' result <- compute_sparse_mve_sr(mu = mu,
+#'                                 sigma = sigma,
+#'                                 max_card = 2,
+#'                                 greedy_perc = 1.0,
+#'                                 do_checks = TRUE)
 #' @export
 compute_sparse_mve_sr <- function(mu, sigma, max_card, greedy_perc, do_checks = FALSE) {
 

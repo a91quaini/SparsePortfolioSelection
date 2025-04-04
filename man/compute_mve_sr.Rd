@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R, R/compute_mve_sr.R
 \name{compute_mve_sr}
 \alias{compute_mve_sr}
-\title{Compute Optimal Portfolio Sharpe Ratio}
+\title{Compute Mean-Variance Efficient Portfolio Sharpe Ratio}
 \usage{
 compute_mve_sr(mu, sigma, selection, do_checks = FALSE)
 

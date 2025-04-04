@@ -85,9 +85,9 @@ arma::vec compute_mve_weights(const arma::vec& first_moment,
 // Compute Highest Sharpe Ratio with Cardinality Constraint (sparse MVE)
 Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
                                  const arma::mat& sigma,
-                                 unsigned int max_card = 1,
-                                 const double greedy_perc = 1.0,
-                                 const bool do_checks = false) {
+                                 unsigned int max_card,
+                                 const double greedy_perc,
+                                 const bool do_checks) {
   // Input checks.
   if (do_checks) {
     if (mu.n_elem == 0 || sigma.n_elem == 0) {

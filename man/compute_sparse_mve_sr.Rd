@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R, R/compute_sparse_mve_sr.R
 \name{compute_sparse_mve_sr}
 \alias{compute_sparse_mve_sr}
-\title{Compute Highest Sharpe Ratio with Cardinality Constraint}
+\title{Compute Mean-Variance Efficient Sharpe Ratio with Cardinality Constraint}
 \usage{
 compute_sparse_mve_sr(mu, sigma, max_card, greedy_perc, do_checks = FALSE)
 
@@ -53,5 +53,9 @@ sigma <- matrix(c(0.01, 0.002, 0.001, 0.0005,
                   0.002, 0.02, 0.0015, 0.001,
                   0.001, 0.0015, 0.015, 0.0007,
                   0.0005, 0.001, 0.0007, 0.012), nrow = 4, byrow = TRUE)
-result <- compute_sparse_mve_sr(mu = mu, sigma = sigma, max_card = 2, greedy_perc = 1.0, do_checks = TRUE)
+result <- compute_sparse_mve_sr(mu = mu,
+                                sigma = sigma,
+                                max_card = 2,
+                                greedy_perc = 1.0,
+                                do_checks = TRUE)
 }

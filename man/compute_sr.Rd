@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R, R/compute_sr.R
 \name{compute_sr}
 \alias{compute_sr}
-\title{Compute Sharpe Ratio}
+\title{Compute Portfolio Sharpe Ratio}
 \usage{
 compute_sr(weights, mu, sigma, do_checks = FALSE)
 
