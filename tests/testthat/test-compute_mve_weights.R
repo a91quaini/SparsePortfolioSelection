@@ -6,7 +6,7 @@ test_that("Full selection with identity second_moment and ones first_moment work
   gamma <- 1
   # Expected: (1/gamma)*solve(second_moment, first_moment)
   expected <- solve(second_moment, first_moment) / gamma
-  result <- mve_weights(gamma = gamma,
+  result <- compute_mve_weights(gamma = gamma,
                         first_moment = first_moment,
                         second_moment = second_moment,
                         selection = 0:1,
@@ -19,7 +19,7 @@ test_that("Full selection with gamma != 1 scales correctly", {
   second_moment <- diag(2)
   gamma <- 2
   expected <- solve(second_moment, first_moment) / gamma
-  result <- mve_weights(gamma = gamma,
+  result <- compute_mve_weights(gamma = gamma,
                         first_moment = first_moment,
                         second_moment = second_moment,
                         selection = 0:1,
@@ -31,12 +31,12 @@ test_that("Empty selection defaults to full selection", {
   first_moment <- c(0.1, 0.2, 0.3)
   second_moment <- diag(3)
   # When selection is empty, full portfolio is used.
-  expected <- mve_weights(gamma = 1,
+  expected <- compute_mve_weights(gamma = 1,
                           first_moment = first_moment,
                           second_moment = second_moment,
                           selection = 0:2,
                           do_checks = TRUE)
-  result <- mve_weights(gamma = 1,
+  result <- compute_mve_weights(gamma = 1,
                         first_moment = first_moment,
                         second_moment = second_moment,
                         selection = integer(0),
@@ -49,7 +49,7 @@ test_that("Subset selection returns full-length vector with zeros for unselected
   second_moment <- diag(3)
   # Select assets 0 and 2 (0-indexed)
   selection <- c(0, 2)
-  result <- mve_weights(gamma = 1,
+  result <- compute_mve_weights(gamma = 1,
                         first_moment = first_moment,
                         second_moment = second_moment,
                         selection = selection,
@@ -71,7 +71,7 @@ test_that("do_checks detects non-square second_moment", {
   first_moment <- c(0.1, 0.2)
   second_moment <- matrix(1:6, nrow = 2, ncol = 3)
   expect_error(
-    mve_weights(gamma = 1,
+    compute_mve_weights(gamma = 1,
                 first_moment = first_moment,
                 second_moment = second_moment,
                 selection = 0:1,
@@ -84,7 +84,7 @@ test_that("do_checks detects first_moment length not equal to second_moment dime
   first_moment <- c(0.1, 0.2, 0.3)
   second_moment <- diag(2)
   expect_error(
-    mve_weights(gamma = 1,
+    compute_mve_weights(gamma = 1,
                 first_moment = first_moment,
                 second_moment = second_moment,
                 selection = 0:1,
@@ -99,7 +99,7 @@ test_that("do_checks detects asset selection index out of bounds", {
   # Here, index 3 is out-of-bounds (valid indices are 0, 1, 2).
   selection <- c(0, 3)
   expect_error(
-    mve_weights(gamma = 1,
+    compute_mve_weights(gamma = 1,
                 first_moment = first_moment,
                 second_moment = second_moment,
                 selection = selection,
@@ -112,7 +112,7 @@ test_that("gamma = 0 produces Inf or NaN values", {
   first_moment <- rep(1, 2)
   second_moment <- diag(2)
   # With gamma = 0, division by zero is expected.
-  result <- mve_weights(gamma = 0,
+  result <- compute_mve_weights(gamma = 0,
                         first_moment = first_moment,
                         second_moment = second_moment,
                         selection = 0:1,

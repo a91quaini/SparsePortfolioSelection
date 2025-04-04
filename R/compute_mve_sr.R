@@ -3,7 +3,7 @@
 #' Given a mean vector \eqn{\mu}, a covariance matrix \eqn{\Sigma},
 #' and an asset selection vector, this function computes the optimal square
 #' Sharpe ratio defined as
-#' \deqn{\mu^T \Sigma^{-1}\mu}
+#' \deqn{\sqrt{\mu^T \Sigma^{-1}\mu}}
 #' over the selected assets.
 #' If the provided asset selection vector has length less than N,
 #' the function uses the subset of assets and computes the ratio using those assets.
@@ -15,7 +15,7 @@
 #' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 #' @examples
 #' # Full selection example:
-#' mve_sqsr(mu = c(0.1, 0.2, 0.15),
+#' compute_mve_sr(mu = c(0.1, 0.2, 0.15),
 #'                        sigma = matrix(c(1, 0.2, 0.1,
 #'                                           0.2, 1, 0.3,
 #'                                           0.1, 0.3, 1), nrow = 3),
@@ -23,12 +23,12 @@
 #'                        do_checks = TRUE)
 #'
 #' # Subset selection example:
-#' mve_sqsr(mu = c(0.1, 0.2, 0.15, 0.12),
+#' compute_mve_sr(mu = c(0.1, 0.2, 0.15, 0.12),
 #'                        sigma = diag(4),
 #'                        selection = c(0, 2),
 #'                        do_checks = TRUE)
 #' @export
-mve_sqsr <- function(mu, sigma, selection, do_checks = FALSE) {
+compute_mve_sr <- function(mu, sigma, selection, do_checks = FALSE) {
 
   # Check inputs
   if (do_checks) {
@@ -69,5 +69,5 @@ mve_sqsr <- function(mu, sigma, selection, do_checks = FALSE) {
     }
   }
 
-  .Call(`_SparsePortfolioSelection_mve_sqsr`, mu, sigma, as.integer(selection), FALSE)
+  .Call(`_SparsePortfolioSelection_compute_mve_sr`, mu, sigma, as.integer(selection), FALSE)
 }

@@ -1,7 +1,7 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
-//' Compute Optimal Portfolio Square Sharpe Ratio
+//' Compute Optimal Portfolio Sharpe Ratio
 //'
 //' Given a mean vector \eqn{\mu}, a covariance matrix \eqn{\Sigma},
 //' and an asset selection vector, this function computes the optimal Sharpe ratio defined as
@@ -17,7 +17,7 @@
 //' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 //' @export
 // [[Rcpp::export]]
-double mve_sqsr(const arma::vec& mu,
+double compute_mve_sr(const arma::vec& mu,
                 const arma::mat& sigma,
                 const arma::uvec& selection,
                 const bool do_checks = false) {
@@ -40,13 +40,13 @@ double mve_sqsr(const arma::vec& mu,
 
  // If selection is not supplied or is full, use full mu and sigma.
  if (selection.n_elem == 0 || selection.n_elem == mu.n_elem) {
-   return arma::dot(mu, arma::solve(sigma, mu));
+   return std::sqrt( arma::dot(mu, arma::solve(sigma, mu)) );
  }
 
  // Otherwise, subset the inputs according to the asset selection.
  const arma::vec mu_sel = mu.elem(selection);
  const arma::mat sigma_sel = sigma.submat(selection, selection);
 
- return arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel));
+ return std::sqrt( arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel)) );
 }
 

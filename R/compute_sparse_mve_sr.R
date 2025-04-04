@@ -1,4 +1,4 @@
-#' Compute Optimal Square Sharpe Ratio with Cardinality Constraint
+#' Compute Optimal Sharpe Ratio with Cardinality Constraint
 #'
 #' This function takes as inputs the mean vector \code{mu}, the covariance matrix \code{sigma},
 #' the maximum active portfolio cardinality \code{max_card},
@@ -24,9 +24,9 @@
 #'                   0.002, 0.02, 0.0015, 0.001,
 #'                   0.001, 0.0015, 0.015, 0.0007,
 #'                   0.0005, 0.001, 0.0007, 0.012), nrow = 4, byrow = TRUE)
-#' result <- sparse_mve_sqsr(mu = mu, sigma = sigma, max_card = 2, greedy_perc = 1.0, do_checks = TRUE)
+#' result <- compute_sparse_mve_sr(mu = mu, sigma = sigma, max_card = 2, greedy_perc = 1.0, do_checks = TRUE)
 #' @export
-sparse_mve_sqsr <- function(mu, sigma, max_card, greedy_perc, do_checks = FALSE) {
+compute_sparse_mve_sr <- function(mu, sigma, max_card, greedy_perc, do_checks = FALSE) {
 
   # Check inputs
   if (do_checks) {
@@ -76,5 +76,5 @@ sparse_mve_sqsr <- function(mu, sigma, max_card, greedy_perc, do_checks = FALSE)
     }
   }
 
-  .Call(`_SparsePortfolioSelection_sparse_mve_sqsr`, mu, sigma, as.integer(max_card), greedy_perc, FALSE)
+  .Call(`_SparsePortfolioSelection_compute_sparse_mve_sr`, mu, sigma, as.integer(max_card), greedy_perc, FALSE)
 }

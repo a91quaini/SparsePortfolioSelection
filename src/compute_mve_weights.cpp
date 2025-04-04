@@ -18,7 +18,7 @@
 //' @return An N-length vector of mean variance efficient weights.
 //' @export
 // [[Rcpp::export]]
-arma::vec mve_weights(const arma::vec& first_moment,
+arma::vec compute_mve_weights(const arma::vec& first_moment,
                       const arma::mat& second_moment,
                       const arma::uvec& selection,
                       const double gamma = 1.0,

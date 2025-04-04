@@ -50,7 +50,7 @@ arma::uvec random_combination(const unsigned int n, const unsigned int k) {
   return comb;
 }
 
-//' Compute Highest Square Sharpe Ratio with Cardinality Constraint
+//' Compute Highest Sharpe Ratio with Cardinality Constraint
 //'
 //' This function takes as inputs the mean vector \code{mu}, the covariance matrix \code{sigma},
 //' the maximum active portfolio cardinality \code{max_card},
@@ -72,7 +72,7 @@ arma::uvec random_combination(const unsigned int n, const unsigned int k) {
 //' @return A list with \code{sqsr} (the optimal square Sharpe ratio) and \code{selection} (the asset indices of the optimal selection).
 //' @export
 // [[Rcpp::export]]
-Rcpp::List sparse_mve_sqsr(const arma::vec& mu,
+Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
                            const arma::mat& sigma,
                            unsigned int max_card = 1,
                            const double greedy_perc = 1.0,
@@ -103,8 +103,8 @@ Rcpp::List sparse_mve_sqsr(const arma::vec& mu,
  }
 
  // Initialize variables to store the best square Sharpe ratio and selection.
- double best_sqsr = 0.0;
- arma::uvec best_selection;
+ double mve_sr = -std::numeric_limits<double>::infinity();
+ arma::uvec mve_selection;
 
  // If greedy_perc is greater or equal to 1.0, evaluate all combinations for each cardinality.
  if (greedy_perc >= 1.0) {
@@ -122,10 +122,10 @@ Rcpp::List sparse_mve_sqsr(const arma::vec& mu,
        // Compute the square Sharpe ratio for the selected combination.
        const arma::vec mu_sel = mu.elem(sel);
        const arma::mat sigma_sel = sigma.submat(sel, sel);
-       const double current_sqsr = arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel));
-       if (current_sqsr > best_sqsr) {
-         best_sqsr = current_sqsr;
-         best_selection = sel;
+       const double current_sr = std::sqrt( arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel)) );
+       if (current_sr > mve_sr) {
+         mve_sr = current_sr;
+         mve_selection = sel;
        }
      }
    }
@@ -144,16 +144,15 @@ Rcpp::List sparse_mve_sqsr(const arma::vec& mu,
        const arma::uvec sel = random_combination(n, k);
        const arma::vec mu_sel = mu.elem(sel);
        const arma::mat sigma_sel = sigma.submat(sel, sel);
-       const double current_sqsr = arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel));
-       if (current_sqsr > best_sqsr) {
-         best_sqsr = current_sqsr;
-         best_selection = sel;
+       const double current_sr = std::sqrt( arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel)) );
+       if (current_sr > mve_sr) {
+         mve_sr = current_sr;
+         mve_selection = sel;
        }
      }
    }
  }
 
-
- return Rcpp::List::create(Rcpp::Named("sqsr") = best_sqsr,
-                           Rcpp::Named("selection") = best_selection);
+ return Rcpp::List::create(Rcpp::Named("sr") = mve_sr,
+                           Rcpp::Named("selection") = mve_selection);
 }

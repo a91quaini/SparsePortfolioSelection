@@ -15,7 +15,7 @@
 #' @return A vector of portfolio weights.
 #' @examples
 #' # Full selection example:
-#' mve_weights(first_moment = c(0.1, 0.2, 0.15),
+#' compute_mve_weights(first_moment = c(0.1, 0.2, 0.15),
 #'             second_moment = matrix(c(1, 0.2, 0.1,
 #'                                      0.2, 1, 0.3,
 #'                                      0.1, 0.3, 1), nrow = 3),
@@ -24,13 +24,13 @@
 #'             do_checks = TRUE)
 #'
 #' # Subset selection example:
-#' mve_weights(first_moment = c(0.1, 0.2, 0.15, 0.12),
+#' compute_mve_weights(first_moment = c(0.1, 0.2, 0.15, 0.12),
 #'             second_moment = diag(4),
 #'             selection = c(0, 2),
 #'             gamma = 1,
 #'             do_checks = TRUE)
 #' @export
-mve_weights <- function(first_moment,
+compute_mve_weights <- function(first_moment,
                         second_moment,
                         selection,
                         gamma = 1,
@@ -75,5 +75,5 @@ mve_weights <- function(first_moment,
     }
   }
 
-  .Call(`_SparsePortfolioSelection_mve_weights`, first_moment, second_moment, as.integer(selection), gamma, FALSE)
+  .Call(`_SparsePortfolioSelection_compute_mve_weights`, first_moment, second_moment, as.integer(selection), gamma, FALSE)
 }
