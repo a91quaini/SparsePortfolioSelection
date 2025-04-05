@@ -29,15 +29,15 @@ compute_mve_sr <- function(mu, sigma, selection, do_checks = FALSE) {
 #' If the provided asset selection vector has length less than N,
 #' the function returns an N-length weight vector with zeros for the unselected assets.
 #'
-#' @param first_moment First moment vector.
+#' @param mu First moment vector.
 #' @param second_moment Second moment matrix.
 #' @param selection Unsigned integer vector with asset indices.
 #' @param gamma Risk aversion parameter. Default is 1.
 #' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 #' @return An N-length vector of mean variance efficient weights.
 #' @export
-compute_mve_weights <- function(first_moment, second_moment, selection, gamma = 1.0, do_checks = FALSE) {
-    .Call(`_SparsePortfolioSelection_compute_mve_weights`, first_moment, second_moment, selection, gamma, do_checks)
+compute_mve_weights <- function(mu, second_moment, selection, gamma = 1.0, do_checks = FALSE) {
+    .Call(`_SparsePortfolioSelection_compute_mve_weights`, mu, second_moment, selection, gamma, do_checks)
 }
 
 #' Compute Mean-Variance Efficient Sharpe Ratio with Cardinality Constraint
@@ -63,6 +63,35 @@ compute_mve_weights <- function(first_moment, second_moment, selection, gamma = 
 #' @export
 compute_sparse_mve_sr <- function(mu, sigma, max_card = 1L, greedy_perc = 1.0, do_checks = FALSE) {
     .Call(`_SparsePortfolioSelection_compute_sparse_mve_sr`, mu, sigma, max_card, greedy_perc, do_checks)
+}
+
+#' Compute Sharpe Ratio Loss due to Estimation and Selection Errors
+#'
+#' This function takes as input a population MVE Sharpe ratio (mve_sr),
+#' the population parameters (mu and sigma) and corresponding sample parameters
+#' (mu_sample and sigma_sample), together with a maximum cardinality (max_card)
+#' and a greedy percentage (greedy_perc). It computes the sample sparse MVE portfolio,
+#' then uses it to compute two versions of the population Sharpe ratio (one computed on the
+#' full population using the sample selection and one computed on the sample).
+#' Finally, it returns a list containing:
+#'   sr_loss: The loss between the population MVE Sharpe ratio and the sample portfolio SR.
+#'   sr_loss_selection: The loss between the population MVE SR and the population SR computed using the sample selection.
+#'   sr_loss_estimation: The difference between the two computed population SRs.
+#'
+#' @param mve_sr Optimal population Sharpe ratio.
+#' @param mu Mean vector.
+#' @param sigma Covariance matrix.
+#' @param mu_hat Sample mean vector.
+#' @param sigma Sample covariance matrix.
+#' @param max_card Maximum cardinality to consider (from 1 up to the number of assets).
+#' @param greedy_perc If less than 1, the fraction of combinations to evaluate for each cardinality;
+#'                    if 1 or greater, all combinations are evaluated;
+#'                    if less than 0, no combinations are evaluated.
+#' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
+#' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
+#' @export
+compute_sr_sparsity_loss <- function(mve_sr, mu, sigma, mu_sample, sigma_sample, max_card, greedy_perc = 1.0, do_checks = FALSE) {
+    .Call(`_SparsePortfolioSelection_compute_sr_sparsity_loss`, mve_sr, mu, sigma, mu_sample, sigma_sample, max_card, greedy_perc, do_checks)
 }
 
 #' Compute Portfolio Sharpe Ratio

@@ -2,7 +2,10 @@ Package: SparsePortfolioSelection
 Title: Risk Reduction via Sparse Portfolio Selection
 Version: 0.0.0.9000
 Authors@R: 
-    person("Alberto", "Quaini", , "alberto91quaini@gmail.com", role = c("aut", "cre"))
+    person(given = "Alberto", family = "Quaini", 
+           email = "alberto91quaini@gmail.com", 
+           role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0000-0002-1251-0599"))
 Description: Replication codes for the paper ``Risk Reduction via Sparse Portfolio Selection".
 License: GPL (>= 3)
 Encoding: UTF-8
@@ -17,3 +20,6 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 SystemRequirements: C++11
+Depends: 
+    R (>= 3.5)
+LazyData: true

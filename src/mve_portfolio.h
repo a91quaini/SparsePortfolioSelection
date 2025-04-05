@@ -33,7 +33,7 @@ double compute_mve_sr(const arma::vec& mu,
 //' If the provided asset selection vector has length less than N,
 //' the function returns an N-length weight vector with zeros for the unselected assets.
 //'
-//' @param first_moment First moment vector.
+//' @param mu First moment vector.
 //' @param second_moment Second moment matrix.
 //' @param selection Unsigned integer vector with asset indices.
 //' @param gamma Risk aversion parameter. Default is 1.
@@ -41,7 +41,7 @@ double compute_mve_sr(const arma::vec& mu,
 //' @return An N-length vector of mean variance efficient weights.
 //' @export
 // [[Rcpp::export]]
-arma::vec compute_mve_weights(const arma::vec& first_moment,
+arma::vec compute_mve_weights(const arma::vec& mu,
                               const arma::mat& second_moment,
                               const arma::uvec& selection,
                               const double gamma = 1.0,
@@ -74,5 +74,40 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
                                  unsigned int max_card = 1,
                                  const double greedy_perc = 1.0,
                                  const bool do_checks = false);
+
+//' Compute Sharpe Ratio Loss due to Estimation and Selection Errors
+//'
+//' This function takes as input a population MVE Sharpe ratio (mve_sr),
+//' the population parameters (mu and sigma) and corresponding sample parameters
+//' (mu_sample and sigma_sample), together with a maximum cardinality (max_card)
+//' and a greedy percentage (greedy_perc). It computes the sample sparse MVE portfolio,
+//' then uses it to compute two versions of the population Sharpe ratio (one computed on the
+//' full population using the sample selection and one computed on the sample).
+//' Finally, it returns a list containing:
+//'   sr_loss: The loss between the population MVE Sharpe ratio and the sample portfolio SR.
+//'   sr_loss_selection: The loss between the population MVE SR and the population SR computed using the sample selection.
+//'   sr_loss_estimation: The difference between the two computed population SRs.
+//'
+//' @param mve_sr Optimal population Sharpe ratio.
+//' @param mu Mean vector.
+//' @param sigma Covariance matrix.
+//' @param mu_hat Sample mean vector.
+//' @param sigma Sample covariance matrix.
+//' @param max_card Maximum cardinality to consider (from 1 up to the number of assets).
+//' @param greedy_perc If less than 1, the fraction of combinations to evaluate for each cardinality;
+//'                    if 1 or greater, all combinations are evaluated;
+//'                    if less than 0, no combinations are evaluated.
+//' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
+//' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
+//' @export
+// [[Rcpp::export]]
+Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
+                                    const arma::vec& mu,
+                                    const arma::mat& sigma,
+                                    const arma::vec& mu_sample,
+                                    const arma::mat& sigma_sample,
+                                    unsigned int max_card,
+                                    const double greedy_perc = 1.0,
+                                    bool do_checks = false);
 
 #endif // MVE_PORTFOLIO_H

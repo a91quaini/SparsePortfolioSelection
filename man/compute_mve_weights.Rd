@@ -4,24 +4,12 @@
 \alias{compute_mve_weights}
 \title{Compute Mean-Variance Efficient (MVE) Portfolio Weights}
 \usage{
-compute_mve_weights(
-  first_moment,
-  second_moment,
-  selection,
-  gamma = 1,
-  do_checks = FALSE
-)
+compute_mve_weights(mu, second_moment, selection, gamma = 1, do_checks = FALSE)
 
-compute_mve_weights(
-  first_moment,
-  second_moment,
-  selection,
-  gamma = 1,
-  do_checks = FALSE
-)
+compute_mve_weights(mu, second_moment, selection, gamma = 1, do_checks = FALSE)
 }
 \arguments{
-\item{first_moment}{First moment vector}
+\item{mu}{First moment vector}
 
 \item{second_moment}{Second moment matrix}
 
@@ -46,14 +34,14 @@ the function returns an N-length weight vector with zeros for the unselected ass
 
 Given a risk-aversion parameter \eqn{\gamma}, a first moment vector, a second moment matrix,
 and a selection index vector, this function computes the mean variance efficient portfolio weights
-\deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \text{first\_moment}},
+\deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \mu},
 over the selected assets.
 If the provided asset selection vector has length less than N,
 the function returns an N-length weight vector with zeros for the unselected assets.
 }
 \examples{
 # Full selection example:
-compute_mve_weights(first_moment = c(0.1, 0.2, 0.15),
+compute_mve_weights(mu = c(0.1, 0.2, 0.15),
             second_moment = matrix(c(1, 0.2, 0.1,
                                      0.2, 1, 0.3,
                                      0.1, 0.3, 1), nrow = 3),
@@ -62,7 +50,7 @@ compute_mve_weights(first_moment = c(0.1, 0.2, 0.15),
             do_checks = TRUE)
 
 # Subset selection example:
-compute_mve_weights(first_moment = c(0.1, 0.2, 0.15, 0.12),
+compute_mve_weights(mu = c(0.1, 0.2, 0.15, 0.12),
             second_moment = diag(4),
             selection = c(0, 2),
             gamma = 1,
