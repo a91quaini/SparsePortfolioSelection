@@ -1,5 +1,3 @@
-library(testthat)
-
 test_that("Full selection with identity sigma and ones mu works", {
   # Use full selection with mu = (1,1,1) and sigma = identity (3x3).
   mu <- rep(1, 3)

@@ -1,5 +1,3 @@
-library(testthat)
-
 test_that("Full selection with identity second_moment and ones mu works", {
   mu <- rep(1, 2)
   second_moment <- diag(2)

@@ -1,5 +1,3 @@
-library(testthat)
-
 test_that("Full selection returns full combination when max_card equals number of assets", {
   # For a 3-asset portfolio, with sigma = identity, the square Sharpe ratio is simply sum(mu^2)
   mu <- c(0.1, 0.2, 0.15)

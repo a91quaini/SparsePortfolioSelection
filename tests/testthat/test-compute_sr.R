@@ -1,5 +1,3 @@
-library(testthat)
-
 test_that("compute_sr works for valid input", {
   # Two-asset example
   weights <- c(0.5, 0.5)
