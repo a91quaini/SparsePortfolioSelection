@@ -13,7 +13,7 @@ compute_mve_sr(mu, sigma, selection, do_checks = FALSE)
 
 \item{sigma}{Covariance matrix.}
 
-\item{selection}{Asset selection vector (default = full set, 0-indexed).}
+\item{selection}{Asset selection vector (default = full ).}
 
 \item{do_checks}{Logical flag to perform input checks (default = FALSE).}
 }
@@ -44,12 +44,12 @@ compute_mve_sr(mu = c(0.1, 0.2, 0.15),
                        sigma = matrix(c(1, 0.2, 0.1,
                                           0.2, 1, 0.3,
                                           0.1, 0.3, 1), nrow = 3),
-                       selection = c(0, 1, 2),
+                       selection = c(1, 2, 3),
                        do_checks = TRUE)
 
 # Subset selection example:
 compute_mve_sr(mu = c(0.1, 0.2, 0.15, 0.12),
                        sigma = diag(4),
-                       selection = c(0, 2),
+                       selection = c(1, 3),
                        do_checks = TRUE)
 }

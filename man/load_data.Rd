@@ -2,44 +2,45 @@
 % Please edit documentation in R/load_data.R
 \name{load_data}
 \alias{load_data}
-\title{Load Returns Data}
+\title{Load Returns or Factors Data}
 \usage{
-load_data(type = 0, do_checks = TRUE)
+load_data(type = "p", do_checks = TRUE)
 }
 \arguments{
-\item{type}{An integer indicating the type of data to load. Use \code{0} (default) for portfolio data and
-\code{1} for individual asset data (CRSP returns).}
+\item{type}{A character string indicating the type of data to load. Valid options are "p" for portfolios, "i" for individual assets, and "f" for factors.}
 
-\item{do_checks}{Logical. If \code{TRUE} (default), the function will check that \code{type} is valid.}
+\item{do_checks}{Logical. If \code{TRUE} (the default), the function checks that \code{type} is one of "p", "i", or "f".}
 }
 \value{
-A numeric matrix containing the returns data.
-For type = 0: Each column corresponds to a portfolio's excess returns, with the Date column removed.
-For type = 1: The matrix contains individual asset excess returns from CRSP, with the Date column removed.
+A numeric matrix named \code{data} containing the data with the Date column removed. For \code{type = "p"}, each column corresponds to a portfolio's excess returns; for \code{type = "i"}, the matrix contains individual asset excess returns; for \code{type = "f"}, the matrix contains the Fama–French 5 factors (tradable).
 }
 \description{
-This function loads and assembles returns data based on the specified type.
-If \code{type = 0}, it loads all double-sorted and industry portfolios,
-and combines their returns into a single numeric matrix (columns represent portfolios).
-If \code{type = 1}, it loads the CRSP returns data, and returns
-a numeric matrix of individual asset returns.
-All data are filtered to include only observations with dates from 05/2008 to 12/2022.
+This function loads and assembles data based on the specified type. The input
+\code{type} can be one of the following:
 }
 \details{
-When \code{type = 0}, the function expects the following objects to be present in the current environment:
-\code{returns_mebeme25}, \code{returns_opinv25}, \code{returns_bemeinv25}, \code{returns_bemeop25},
-\code{returns_meac25}, \code{returns_mebeta25}, \code{returns_meinv25}, \code{returns_meni25},
-\code{returns_meprior10}, \code{returns_meprior122}, \code{returns_meprior6013},
-\code{returns_mevar25}, and \code{returns_ind17}. For \code{type = 1}, the object
-\code{CRSP_returns} must be available.
+"p" loads all double-sorted and industry portfolio objects from the SparsePortfolioSelection package.
+The function removes the Date column from each portfolio object and aggregates their returns (columns represent portfolios)
+into a single numeric matrix.
+
+"i" loads the CRSP individual asset returns data from the SparsePortfolioSelection package.
+It removes the Date column and returns a numeric matrix of individual asset returns.
+
+"f" loads the Fama–French 5 factors (tradable version) data from the SparsePortfolioSelection package.
+It removes the Date column and returns a numeric matrix of factors.
+
+All data are assumed to have been filtered to include only observations with dates from May 2008 to December 2022.
 }
 \examples{
 \dontrun{
-# Load portfolio returns (double-sorted and industry portfolios)
-portfolio_returns <- load_data(type = 0)
+  # Load portfolio returns
+  data <- load_data(type = "p")
 
-# Load individual asset returns from CRSP
-crsp_returns <- load_data(type = 1)
+  # Load individual asset returns (CRSP)
+  data <- load_data(type = "i")
+
+  # Load factor data (Fama–French 5)
+  data <- load_data(type = "f")
 }
 
 }

@@ -10,7 +10,7 @@
 #'
 #' @param mu Mean vector.
 #' @param sigma Covariance matrix.
-#' @param selection Asset selection vector (default = full set, 0-indexed).
+#' @param selection Asset selection vector (default = full ).
 #' @param do_checks Logical flag to perform input checks (default = FALSE).
 #' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 #' @examples
@@ -19,13 +19,13 @@
 #'                        sigma = matrix(c(1, 0.2, 0.1,
 #'                                           0.2, 1, 0.3,
 #'                                           0.1, 0.3, 1), nrow = 3),
-#'                        selection = c(0, 1, 2),
+#'                        selection = c(1, 2, 3),
 #'                        do_checks = TRUE)
 #'
 #' # Subset selection example:
 #' compute_mve_sr(mu = c(0.1, 0.2, 0.15, 0.12),
 #'                        sigma = diag(4),
-#'                        selection = c(0, 2),
+#'                        selection = c(1, 3),
 #'                        do_checks = TRUE)
 #' @export
 compute_mve_sr <- function(mu, sigma, selection, do_checks = FALSE) {
@@ -57,17 +57,17 @@ compute_mve_sr <- function(mu, sigma, selection, do_checks = FALSE) {
     # Check selection.
     if (missing(selection) || length(selection) == 0) {
       # If no selection is provided, default to full selection.
-      selection <- 0:(length(mu) - 1)
+      selection <- 1:length(mu)
     } else {
       if (!is.numeric(selection)) {
         stop("selection must be numeric or integer")
       }
       selection <- as.integer(selection)
-      if (min(selection) < 0 || max(selection) > (length(mu) - 1)) {
+      if (min(selection) < 1 || max(selection) > length(mu)) {
         stop("Asset selection indices out of bounds")
       }
     }
   }
 
-  .Call(`_SparsePortfolioSelection_compute_mve_sr`, mu, sigma, as.integer(selection), FALSE)
+  .Call(`_SparsePortfolioSelection_compute_mve_sr`, mu, sigma, as.integer(selection-1), FALSE)
 }

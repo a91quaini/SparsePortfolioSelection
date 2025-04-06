@@ -13,7 +13,7 @@ compute_mve_weights(mu, second_moment, selection, gamma = 1, do_checks = FALSE)
 
 \item{second_moment}{Second moment matrix}
 
-\item{selection}{Asset selection vector (0-indexed)}
+\item{selection}{Asset selection vector}
 
 \item{gamma}{Risk aversion parameter (default = 1)}
 
@@ -45,14 +45,14 @@ compute_mve_weights(mu = c(0.1, 0.2, 0.15),
             second_moment = matrix(c(1, 0.2, 0.1,
                                      0.2, 1, 0.3,
                                      0.1, 0.3, 1), nrow = 3),
-            selection = c(0, 1, 2),
+            selection = c(1, 2, 3),
             gamma = 1,
             do_checks = TRUE)
 
 # Subset selection example:
 compute_mve_weights(mu = c(0.1, 0.2, 0.15, 0.12),
             second_moment = diag(4),
-            selection = c(0, 2),
+            selection = c(1, 3),
             gamma = 1,
             do_checks = TRUE)
 }

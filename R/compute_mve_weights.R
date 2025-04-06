@@ -9,7 +9,7 @@
 #'
 #' @param mu First moment vector
 #' @param second_moment Second moment matrix
-#' @param selection Asset selection vector (0-indexed)
+#' @param selection Asset selection vector
 #' @param gamma Risk aversion parameter (default = 1)
 #' @param do_checks Logical flag to perform input checks (default = FALSE)
 #' @return A vector of portfolio weights.
@@ -19,14 +19,14 @@
 #'             second_moment = matrix(c(1, 0.2, 0.1,
 #'                                      0.2, 1, 0.3,
 #'                                      0.1, 0.3, 1), nrow = 3),
-#'             selection = c(0, 1, 2),
+#'             selection = c(1, 2, 3),
 #'             gamma = 1,
 #'             do_checks = TRUE)
 #'
 #' # Subset selection example:
 #' compute_mve_weights(mu = c(0.1, 0.2, 0.15, 0.12),
 #'             second_moment = diag(4),
-#'             selection = c(0, 2),
+#'             selection = c(1, 3),
 #'             gamma = 1,
 #'             do_checks = TRUE)
 #' @export
@@ -62,18 +62,18 @@ compute_mve_weights <- function(mu,
 
     # Validate selection.
     if (missing(selection) || length(selection) == 0) {
-      # Default to full selection (0-indexed)
-      selection <- 0:(length(mu) - 1)
+      # Default to full selection
+      selection <- 1:length(mu)
     } else {
       if (!is.numeric(selection)) {
         stop("selection must be numeric or integer")
       }
       selection <- as.integer(selection)
-      if (min(selection) < 0 || max(selection) > (length(mu) - 1)) {
+      if (min(selection) < 1 || max(selection) > length(mu)) {
         stop("Asset selection indices out of bounds")
       }
     }
   }
 
-  .Call(`_SparsePortfolioSelection_compute_mve_weights`, mu, second_moment, as.integer(selection), gamma, FALSE)
+  .Call(`_SparsePortfolioSelection_compute_mve_weights`, mu, second_moment, as.integer(selection - 1), gamma, FALSE)
 }
