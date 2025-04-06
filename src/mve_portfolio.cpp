@@ -6,6 +6,38 @@
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
+// Compute Portfolio Sharpe Ratio: (w^T mu) / sqrt(w^T sigma w)
+double compute_sr(const arma::vec& weights,
+                  const arma::vec& mu,
+                  const arma::mat& sigma,
+                  const bool do_checks) {
+
+  // Optional input checks.
+  if (do_checks) {
+    if (weights.n_elem == 0) {
+      Rcpp::stop("weights must be non-empty");
+    }
+    if (mu.n_elem == 0) {
+      Rcpp::stop("mu must be non-empty");
+    }
+    if (sigma.n_elem == 0) {
+      Rcpp::stop("sigma must be provided");
+    }
+    if (weights.n_elem != mu.n_elem) {
+      Rcpp::stop("weights and mu must be of the same length");
+    }
+    if (sigma.n_rows != sigma.n_cols) {
+      Rcpp::stop("sigma must be a square matrix");
+    }
+    if (sigma.n_rows != weights.n_elem) {
+      Rcpp::stop("The dimensions of sigma must match the length of weights");
+    }
+  }
+
+  // Compute the Sharpe ratio: (w^T mu) / sqrt(w^T sigma w)
+  return arma::dot(weights, mu) / std::sqrt(arma::as_scalar(weights.t() * sigma * weights));
+}
+
 // Compute Optimal Portfolio Sharpe Ratio (MVE)
 double compute_mve_sr(const arma::vec& mu,
                       const arma::mat& sigma,
@@ -185,7 +217,7 @@ Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
                                     const arma::mat& sigma_sample,
                                     unsigned int max_card,
                                     const double greedy_perc,
-                                    bool do_checks) {
+                                    const bool do_checks) {
 
   // Check if the input parameters are valid
   if (do_checks) {
@@ -255,4 +287,53 @@ Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
                              Rcpp::Named("sr_loss_selection") = mve_sr - mve_sr_sel_sample,
                              Rcpp::Named("sr_loss_estimation") = mve_sr_sel_sample - mve_sr_sparse_sample);
 
+}
+
+Rcpp::List simulate_sr_loss(const double mve_sr,
+                            const arma::vec& mu,
+                            const arma::mat& sigma,
+                            const unsigned int n_obs,
+                            const unsigned int max_card,
+                            const double greedy_perc,
+                            const bool do_checks) {
+
+  // Check if the input parameters are valid
+  if (do_checks) {
+    if (mu.n_elem == 0) {
+      Rcpp::stop("mu must be non-empty");
+    }
+    if (sigma.n_elem == 0) {
+      Rcpp::stop("sigma must be provided");
+    }
+    if (sigma.n_rows != sigma.n_cols) {
+      Rcpp::stop("sigma must be a square matrix");
+    }
+    if (mu.n_elem != sigma.n_rows) {
+      Rcpp::stop("Length of mu must equal number of rows of sigma");
+    }
+    if (max_card < 1 || max_card > mu.n_elem) {
+      Rcpp::stop("max_card must be between 1 and the number of assets in mu_sample");
+    }
+    if (greedy_perc < 0) {
+      Rcpp::stop("greedy_perc must be non-negative");
+    }
+    if (!std::isfinite(mve_sr)) {
+      Rcpp::stop("mve_sr must be a finite number");
+    }
+  }
+
+ // Simulate sample data from a multivariate normal with mean mu and covariance sigma.
+ const arma::mat sample = arma::mvnrnd(mu, sigma, n_obs);
+
+ // Transpose the sample to get an n_obs x d matrix.
+ const arma::mat X = sample.t();
+
+ // Compute the sample mean (as a column vector)
+ const arma::vec mu_sample = arma::mean(sample, 1);
+
+ // Compute the sample covariance matrix.
+ const arma::mat sigma_sample = arma::cov(X);
+
+ // Compute the Sharpe ratio loss
+ return compute_sr_sparsity_loss(mve_sr, mu, sigma, mu_sample, sigma_sample, max_card, greedy_perc, do_checks);
 }

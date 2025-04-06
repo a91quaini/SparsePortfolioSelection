@@ -3,6 +3,24 @@
 
 #include <RcppArmadillo.h>
 
+//' Compute Portfolio Sharpe Ratio
+//'
+//' Given a vector of portfolio weights, a vector of mean returns, and a covariance matrix,
+//' this function computes the Sharpe ratio defined as
+//' \deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}.}
+//'
+//' @param weights A numeric vector of portfolio weights.
+//' @param mu A numeric vector of expected returns.
+//' @param sigma A numeric covariance matrix.
+//' @param do_checks Logical flag indicating whether to perform input checks (default = false).
+//' @return A double representing the Sharpe ratio.
+//' @export
+// [[Rcpp::export]]
+double compute_sr(const arma::vec& weights,
+                 const arma::vec& mu,
+                 const arma::mat& sigma,
+                 const bool do_checks = false);
+
 //' Compute Mean-Variance Efficient Portfolio Sharpe Ratio
 //'
 //' Given a mean vector \eqn{\mu}, a covariance matrix \eqn{\Sigma},
@@ -108,6 +126,33 @@ Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
                                     const arma::mat& sigma_sample,
                                     unsigned int max_card,
                                     const double greedy_perc = 1.0,
-                                    bool do_checks = false);
+                                    const bool do_checks = false);
+
+//' Simulate Sharpe Ratio Loss
+//'
+//' This function simulates a sample of size \code{n_obs} from a multivariate normal
+//' distribution with mean vector \code{mu} and covariance matrix \code{sigma}.
+//' It computes the sample mean vector (\code{mu_sample}) and the sample covariance matrix (\code{sigma_sample}),
+//' then calls \code{compute_sr_sparsity_loss} with the population and sample parameters,
+//' the maximum cardinality (\code{max_card}), and the greedy percentage (\code{greedy_perc}).
+//'
+//' @param mve_sr A finite numeric scalar representing the population MVE Sharpe ratio.
+//' @param mu A numeric vector; the population mean vector.
+//' @param sigma A numeric matrix; the population covariance matrix.
+//' @param n_obs An integer specifying the sample size to simulate.
+//' @param max_card A positive integer specifying the maximum cardinality.
+//' @param greedy_perc A numeric scalar (default 1.0) indicating the fraction of combinations to evaluate.
+//' @param do_checks Logical; if TRUE, input checks are performed.
+//'
+//' @return An Rcpp::List containing the Sharpe ratio loss measures.
+//' @export
+// [[Rcpp::export]]
+Rcpp::List simulate_sr_loss(const double mve_sr,
+                           const arma::vec& mu,
+                           const arma::mat& sigma,
+                           const unsigned int n_obs,
+                           const unsigned int max_card,
+                           const double greedy_perc = 1.0,
+                           const bool do_checks = false);
 
 #endif // MVE_PORTFOLIO_H

@@ -4,39 +4,6 @@
 #include <cmath>
 #include <limits>
 
-// Compute Portfolio Sharpe Ratio: (w^T mu) / sqrt(w^T sigma w)
-double compute_sr(const arma::vec& weights,
-                  const arma::vec& mu,
-                  const arma::mat& sigma,
-                  const bool do_checks) {
-
-  // Optional input checks.
-  if (do_checks) {
-    if (weights.n_elem == 0) {
-      Rcpp::stop("weights must be non-empty");
-    }
-    if (mu.n_elem == 0) {
-      Rcpp::stop("mu must be non-empty");
-    }
-    if (sigma.n_elem == 0) {
-      Rcpp::stop("sigma must be provided");
-    }
-    if (weights.n_elem != mu.n_elem) {
-      Rcpp::stop("weights and mu must be of the same length");
-    }
-    if (sigma.n_rows != sigma.n_cols) {
-      Rcpp::stop("sigma must be a square matrix");
-    }
-    if (sigma.n_rows != weights.n_elem) {
-      Rcpp::stop("The dimensions of sigma must match the length of weights");
-    }
-  }
-
-  // Compute the Sharpe ratio: (w^T mu) / sqrt(w^T sigma w)
-  return arma::dot(weights, mu) / std::sqrt(arma::as_scalar(weights.t() * sigma * weights));
-}
-
-
 // Compute nCk (combinations count)
 unsigned long long nCk(const unsigned int n, const unsigned int k) {
   if (k > n) return 0;

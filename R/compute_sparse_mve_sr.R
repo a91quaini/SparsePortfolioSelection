@@ -14,7 +14,7 @@
 #' @param sigma Coveriance matrix
 #' @param max_card Maximum cardinality to consider (from 1 up to the number of assets)
 #' @param greedy_perc If less than 1, the fraction of combinations to evaluate for each cardinality;
-#'                    if 1 or greater, all combinations are evaluated
+#'                    if 1 (default) or greater, all combinations are evaluated.
 #' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE)
 #' @return A list with \code{sqsr} (the optimal square Sharpe ratio) and \code{selection} (the asset indices of the optimal selection)
 #' @examples
@@ -30,7 +30,7 @@
 #'                                 greedy_perc = 1.0,
 #'                                 do_checks = TRUE)
 #' @export
-compute_sparse_mve_sr <- function(mu, sigma, max_card, greedy_perc, do_checks = FALSE) {
+compute_sparse_mve_sr <- function(mu, sigma, max_card, greedy_perc = 1.0, do_checks = FALSE) {
 
   # Check inputs
   if (do_checks) {

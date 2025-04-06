@@ -4,9 +4,9 @@
 \alias{compute_sparse_mve_sr}
 \title{Compute Mean-Variance Efficient Sharpe Ratio with Cardinality Constraint}
 \usage{
-compute_sparse_mve_sr(mu, sigma, max_card, greedy_perc, do_checks = FALSE)
+compute_sparse_mve_sr(mu, sigma, max_card, greedy_perc = 1, do_checks = FALSE)
 
-compute_sparse_mve_sr(mu, sigma, max_card, greedy_perc, do_checks = FALSE)
+compute_sparse_mve_sr(mu, sigma, max_card, greedy_perc = 1, do_checks = FALSE)
 }
 \arguments{
 \item{mu}{Mean vector}
@@ -16,7 +16,7 @@ compute_sparse_mve_sr(mu, sigma, max_card, greedy_perc, do_checks = FALSE)
 \item{max_card}{Maximum cardinality to consider (from 1 up to the number of assets)}
 
 \item{greedy_perc}{If less than 1, the fraction of combinations to evaluate for each cardinality;
-if 1 or greater, all combinations are evaluated}
+if 1 (default) or greater, all combinations are evaluated.}
 
 \item{do_checks}{Logical flag indicating whether to perform input checks (default = FALSE)}
 }
