@@ -1,0 +1,443 @@
+# Simulate Sharpe Ratio Loss
+#
+# This function serves as a wrapper that simulates a sample of returns from a multivariate normal
+# distribution with population mean vector \code{mu} and covariance matrix \code{sigma} (sample size \code{n_obs}),
+# then computes the sample mean vector and sample covariance matrix internally using a C++ implementation.
+# It then calls the Rcpp function \code{simulate_sr_loss_rcpp} (which uses the population parameters, the sample
+# estimates, a maximum cardinality (\code{max_card}), and a greedy percentage (\code{greedy_perc}))
+# to compute the Sharpe ratio loss.
+#
+# When \code{do_checks} is TRUE, input validation is performed to ensure that:
+# \code{mu} is a non-empty numeric vector; \code{sigma} is a non-empty numeric square matrix with dimensions matching \code{mu};
+# \code{n_obs} is a positive integer; \code{max_card} is a positive integer no larger than the length of \code{mu};
+# \code{greedy_perc} is nonnegative; and \code{mve_sr} is a finite numeric scalar.
+#
+# @param mve_sr A numeric scalar representing the population MVE Sharpe ratio.
+# @param mu Numeric vector; the population mean vector.
+# @param sigma Numeric matrix; the population covariance matrix.
+# @param n_obs Integer; the sample size to simulate.
+# @param max_card Positive integer; the maximum cardinality to consider.
+# @param greedy_perc Numeric scalar (default 1.0) indicating the fraction of combinations to evaluate.
+# @param do_checks Logical; if TRUE, performs input validation (default = FALSE).
+#
+# @return A list containing the Sharpe ratio loss measures as computed by the Rcpp function.
+#
+# @examples
+# \dontrun{
+# # Example with three assets:
+# mu <- c(0.1, 0.2, 0.15)
+#   sigma <- diag(3)
+#   mve_sr <- 0.8
+#   n_obs <- 100
+#   max_card <- 2
+#   result <- simulate_sr_loss(mve_sr,
+#                              mu,
+#                              sigma,
+#                              n_obs,
+#                              max_card,
+#                              greedy_perc = 1.0,
+#                              do_checks = TRUE)
+#   print(result)
+# }
+#
+# @export
+simulate_sr_loss <- function(mve_sr, mu, sigma, n_obs, max_card, greedy_perc = 1.0, do_checks = FALSE) {
+  # Perform input validation if do_checks is TRUE
+  if (do_checks) {
+    if (missing(mu) || length(mu) == 0 || !is.numeric(mu)) {
+      stop("mu must be provided and be a non-empty numeric vector")
+    }
+    if (missing(sigma) || !is.matrix(sigma) || nrow(sigma) == 0 || !is.numeric(sigma)) {
+      stop("sigma must be provided as a non-empty numeric matrix")
+    }
+    if (nrow(sigma) != ncol(sigma)) {
+      stop("sigma must be a square matrix")
+    }
+    if (length(mu) != nrow(sigma)) {
+      stop("The length of mu must equal the number of rows of sigma")
+    }
+    if (missing(n_obs) || !is.numeric(n_obs) || n_obs < 1) {
+      stop("n_obs must be a positive integer")
+    }
+    if (missing(max_card) || !is.numeric(max_card) || max_card < 1) {
+      stop("max_card must be a positive integer")
+    }
+    max_card <- as.integer(max_card)
+    if (max_card > length(mu)) {
+      stop("max_card cannot exceed the number of assets (length of mu)")
+    }
+    if (missing(greedy_perc) || !is.numeric(greedy_perc) || greedy_perc < 0) {
+      stop("greedy_perc must be a nonnegative numeric scalar")
+    }
+    if (!is.numeric(mve_sr) || length(mve_sr) != 1 || !is.finite(mve_sr)) {
+      stop("mve_sr must be a finite numeric scalar")
+    }
+  }
+
+  .Call(`_SparsePortfolioSelection_simulate_sr_loss`, mve_sr, mu, sigma, n_obs, max_card, greedy_perc, FALSE)
+
+}
+
+################################################################################
+
+# Calibrate a Factor Model
+#
+# This function calibrates a factor model given a TxN matrix of asset returns and a TxK matrix of factor returns.
+# The function computes the population mean vector
+# and covariance matrix of the factors, and uses these to compute regression coefficients via
+# \eqn{\beta = (\Sigma_f)^{-1} \, \mathrm{Cov}(factors, returns)^T,}
+# where \eqn{\Sigma_f} is the covariance matrix of the factors.
+# The model-implied mean return vector is computed as
+# \eqn{\mu = \beta \, \mu_f,}
+# where \eqn{\mu_f} is the mean vector of the factors.
+# Residuals are then computed (from demeaned returns) and their variances are
+# used to form a diagonal matrix \eqn{\Sigma_0}.
+# Finally, the covariance matrix of asset returns is estimated as
+# \eqn{\Sigma = \beta \, \Sigma_f \, \beta^T + \Sigma_0.}
+#
+# The additional parameter \code{weak_coeff} adjusts the factor betas weakness by dividing them by
+# \eqn{N^{(\text{weak\_coeff}/2)}}, where \eqn{N} is the number of assets.
+# A value of \code{0} (default) indicates no adjustment,
+# while a value of \code{1} indicates full weakness.
+#
+# The parameter \code{idiosy_vol_type} determines the structure of the idiosyncratic volatility:
+# \itemize{
+#   \item \code{0} (default): homoskedastic volatility, so \eqn{\Sigma_0} is the average residual variance times the identity.
+#   \item \code{1}: heteroskedastic volatility (no correlation), so \eqn{\Sigma_0} is a diagonal matrix of asset-specific residual variances.
+# }
+#
+# @param returns A numeric matrix (T x N) of asset returns.
+# @param factors A numeric matrix (T x K) of factor returns.
+# @param weak_coeff A numeric scalar between 0 and 1 indicating the weakness of the factors.
+#                   A value of 0 (default) implies no weakness adjustment,
+#                   while a value of 1 implies full adjustment.
+# @param idiosy_vol_type A numeric scalar representing the type of idiosyncratic volatility:
+#                   0 (default) for homoskedastic; 1 for heteroskedastic.
+# @param do_checks Logical flag indicating whether to perform input validation (default is FALSE).
+#
+# @return A list with two components:
+# \describe{
+#   \item{\eqn{\mu}}{The model-implied mean return vector (an N x 1 matrix or a vector).}
+#   \item{\eqn{\Sigma}}{The model-implied covariance matrix of asset returns (an N x N matrix).}
+# }
+#
+# @examples
+# \dontrun{
+#   set.seed(123)
+#   T <- 100  # number of time periods
+#   N <- 5    # number of assets
+#   K <- 3    # number of factors
+#
+#   # Create a TxK matrix of factor returns
+#   factors <- matrix(rnorm(T * K), nrow = T, ncol = K)
+#
+#   # Create a TxN matrix of asset returns from a linear factor model plus noise
+#   beta_true <- matrix(runif(N * K), nrow = N, ncol = K)
+#   returns <- factors %*% t(beta_true) + matrix(rnorm(T * N, sd = 0.5), nrow = T, ncol = N)
+#
+#   # Calibrate the model with no weak factor adjustment (weak_coeff = 0)
+#   # under homoskedastic volatility
+#   model1 <- calibrate_factor_model(returns,
+#                                    factors,
+#                                    weak_coeff = 0,
+#                                    idiosy_vol_type = 0,
+#                                    do_checks = TRUE)
+#
+#   # Calibrate the model with moderate weak factor adjustment (weak_coeff = 0.5)
+#   # under heteroskedastic volatility
+#   model2 <- calibrate_factor_model(returns,
+#                                    factors,
+#                                    weak_coeff = 0.5,
+#                                    idiosy_vol_type = 1,
+#                                    do_checks = TRUE)
+#
+#   # Display the calibrated mean return vectors and covariance matrices
+#   print(model1$mu)
+#   print(model1$sigma)
+#   print(model2$mu)
+#   print(model2$sigma)
+# }
+#
+# @export
+calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vol_type = 0, do_checks = FALSE) {
+
+  # Perform input validation if do_checks is TRUE
+  if (do_checks) {
+    if (missing(returns) || !is.matrix(returns) || nrow(returns) == 0 || !is.numeric(returns)) {
+      stop("returns must be provided and be a non-empty numeric matrix")
+    }
+    if (missing(factors) || !is.matrix(factors) || nrow(factors) == 0 || !is.numeric(factors)) {
+      stop("factors must be provided as a non-empty numeric matrix")
+    }
+    if (nrow(returns) != nrow(factors)) {
+      stop("The number of rows in returns must equal the number of rows in factors")
+    }
+    if (!is.numeric(weak_coeff) || length(weak_coeff) != 1) {
+      stop("weak_coeff must be a single numeric value")
+    }
+    if (weak_coeff < 0 || weak_coeff > 1) {
+      stop("weak_coeff must be between 0 and 1")
+    }
+    if (!is.numeric(idiosy_vol_type) || length(idiosy_vol_type) != 1 || !(idiosy_vol_type %in% c(0, 1))) {
+      stop("idiosy_vol_type must be a numeric scalar equal to 0 or 1")
+    }
+  }
+
+  # Compute the mean vector and covariance matrix of the factors
+  mu_f <- colMeans(factors)
+  sigma_f <- stats::cov(factors)
+
+  # Compute the regression coefficients beta (each column corresponds to an asset)
+  beta <- t(solve(sigma_f, stats::cov(factors, returns))) / ncol(returns)^(weak_coeff / 2.0)
+
+  # Compute the model-implied mean returns
+  mu <- beta %*% mu_f
+
+  # Compute the residuals (subtract the fitted values and the asset means)
+  residuals <- returns - matrix(1, nrow(returns), 1) %*% colMeans(returns) - factors %*% t(beta)
+
+  # Compute the residual variance for each asset and create a diagonal matrix
+  if (idiosy_vol_type == 0) {
+    sigma0 <- mean(apply(residuals, 2, stats::var)) * diag(ncol(returns))
+  } else if (idiosy_vol_type == 1) {
+    sigma0 <- diag(apply(residuals, 2, stats::var))
+  }
+
+  # Construct the covariance matrix of asset returns
+  sigma <- beta %*% sigma_f %*% t(beta) + sigma0
+
+  return(list(mu = mu, sigma = sigma))
+}
+
+################################################################################
+
+# evaluate_simulation_results
+#
+# This function loads simulation results from a given file,
+# computes summary statistics across different sample sizes (T) and
+# cardinality constraints (k), and produces a set of histogram plots
+# (one per combination of T and k) as well as summary plots.
+#
+# In addition, for each sample size T it creates a summary plot comparing:
+#   a) Population full MVE Sharpe ratio (\(\theta_{*}\)), which is constant,
+#   b) Population sparse MVE Sharpe ratio for each k (\(\theta_{k,*}\)),
+#   c) Sample MVE Sharpe ratio (\(\theta(\hat{w}_k^{\text{card}})\)) computed as
+#      \(\theta_{k,*}\) minus the mean overall loss,
+#   d) Adjusted sample MVE Sharpe ratio (\(\theta_{H(\hat{w}_k^{\text{card}})}\)) computed as
+#      \(\theta_{k,*}\) minus \(\text{mean sr loss} \times \big( 1 - \frac{\text{mean \% selection loss}}{100} \big)\).
+#
+# Moreover, the function computes quantile tables: for each combination of T and k,
+# it computes the lower quantile at \(\alpha/2\) and the upper quantile at \(1-\alpha/2\)
+# for both the overall Sharpe ratio loss and the percentage estimation loss.
+#
+# The histogram and summary plots are saved as PNG files in "inst/simulations/figures".
+#
+# Inputs:
+#   f_name        - Base file name (e.g., "portfolios_1fm_n20")
+#   N             - Number of assets (used for labeling)
+#   mve_sr        - Population full MVE Sharpe ratio (scalar)
+#   mve_sr_sparse - Named list with sparse MVE Sharpe ratios for each cardinality
+#                   (e.g., list("5" = ..., "10" = ..., "15" = ...))
+#   alpha         - Significance level for quantile computation (default 0.05)
+#
+# Returns:
+#   A list with the following matrices:
+#     \item{mean_sr_loss_mat}{Matrix of mean Sharpe ratio loss for each sample size T and cardinality k.}
+#     \item{mean_pct_est_mat}{Matrix of mean percentage estimation loss for each T and k.}
+#     \item{mean_pct_sel_mat}{Matrix of mean percentage selection loss for each T and k.}
+#     \item{quant_sr_loss_lower}{Matrix of the lower quantiles (\(\alpha/2\)) of Sharpe ratio loss.}
+#     \item{quant_sr_loss_upper}{Matrix of the upper quantiles (\(1-\alpha/2\)) of Sharpe ratio loss.}
+#     \item{quant_pct_est_lower}{Matrix of the lower quantiles (\(\alpha/2\)) of percentage estimation loss.}
+#     \item{quant_pct_est_upper}{Matrix of the upper quantiles (\(1-\alpha/2\)) of percentage estimation loss.}
+#
+evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
+                                        mve_sr, mve_sr_sparse, alpha = 0.05) {
+  # Load the simulation results from file
+  f_path <- file.path("inst", "simulations", "results", paste0("results_", f_name, ".rds"))
+  results <- readRDS(f_path)
+
+  # Extract the unique sample sizes (T) and cardinality levels (k)
+  T_vals <- sort(as.numeric(names(results)))
+  k_vals <- sort(as.numeric(unique(unlist(lapply(results, names)))))
+
+  # Prepare empty matrices to store summary statistics
+  mean_sr_loss_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                             dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+  mean_pct_est_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                             dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+  mean_pct_sel_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                             dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+
+  # Prepare empty matrices for quantiles (overall sr_loss and pct_est)
+  quant_sr_loss_lower <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                                dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+  quant_sr_loss_upper <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                                dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+  quant_pct_est_lower <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                                dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+  quant_pct_est_upper <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+                                dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
+
+  # Directory to save figures.
+  output_dir <- file.path("inst", "simulations", "figures")
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+
+  # List to store the arranged histogram plots for each (T, k)
+  plot_list <- list()
+
+  # Loop over each parameter combination to produce histograms and summary stats.
+  for (T_val in T_vals) {
+    for (k_val in k_vals) {
+      sim_matrix <- results[[as.character(T_val)]][[as.character(k_val)]]
+      if (is.null(sim_matrix)) next
+
+      # Create a data frame from the simulation matrix.
+      # Assumes sim_matrix has columns "sr_loss", "sr_loss_selection", "sr_loss_estimation".
+      df <- as.data.frame(sim_matrix)
+
+      # Compute percentage of estimation loss (if sr_loss is 0, set NA)
+      df$pct_est <- with(df, ifelse(sr_loss != 0, sr_loss_estimation / sr_loss * 100, NA))
+
+      # Compute quantiles for sr_loss and pct_est
+      T_key <- paste0("T=", T_val)
+      k_key <- paste0("k=", k_val)
+      quant_sr_loss_lower[T_key, k_key] <- as.numeric(quantile(df$sr_loss, probs = alpha/2, na.rm = TRUE))
+      quant_sr_loss_upper[T_key, k_key] <- as.numeric(quantile(df$sr_loss, probs = 1 - alpha/2, na.rm = TRUE))
+      quant_pct_est_lower[T_key, k_key] <- as.numeric(quantile(df$pct_est, probs = alpha/2, na.rm = TRUE))
+      quant_pct_est_upper[T_key, k_key] <- as.numeric(quantile(df$pct_est, probs = 1 - alpha/2, na.rm = TRUE))
+
+      # Create ggplot for overall Sharpe ratio loss with a gray fill and enlarged text.
+      p1 <- ggplot2::ggplot(df, ggplot2::aes(x = sr_loss)) +
+        ggplot2::geom_histogram(fill = "grey70", color = "black", bins = 30) +
+        ggplot2::labs(title = bquote(bold("Sharpe Ratio Loss" ~
+                                       (theta[italic(k) * "," * "*" ] - theta(hat(w)[italic(k)]^{card})) ~
+                                       ": N =" ~ .(N) ~ ", T =" ~ .(T_val) ~ " and k =" ~ .(k_val))),
+                      x = "Sharpe Ratio Loss", y = "Frequency") +
+        ggplot2::theme_minimal(base_size = 14) +
+        ggplot2::theme(axis.text = ggplot2::element_text(size = 14),
+                       axis.title = ggplot2::element_text(size = 16),
+                       plot.title = ggplot2::element_text(size = 18, face = "bold"))
+
+      # Create ggplot for percentage estimation loss with a gray fill and enlarged text.
+      p2 <- ggplot2::ggplot(df, ggplot2::aes(x = pct_est)) +
+        ggplot2::geom_histogram(fill = "grey70", color = "black", bins = 30) +
+        ggplot2::labs(title = paste("% Estimation Loss: N =", N, ", T =", T_val, "and k =", k_val),
+                      x = "Percentage Estimation Loss", y = "Frequency") +
+        ggplot2::theme_minimal(base_size = 14) +
+        ggplot2::theme(axis.text = ggplot2::element_text(size = 14),
+                       axis.title = ggplot2::element_text(size = 16),
+                       plot.title = ggplot2::element_text(size = 18, face = "bold"))
+
+      # Arrange the two plots in a single panel using gridExtra.
+      arranged <- gridExtra::grid.arrange(p1, p2, nrow = 2)
+
+      # Save the arranged plot to a PNG file.
+      filename <- file.path(output_dir, paste0(f_name, "_t", T_val, "_k", k_val, ".png"))
+      ggplot2::ggsave(filename, arranged, width = 8, height = 10, dpi = 300)
+
+      # Optionally store the arranged plot in a list.
+      plot_list[[paste0("T", T_val, "_k", k_val)]] <- arranged
+
+      # Compute mean overall sr_loss and mean percentages, removing NAs.
+      mean_sr_loss_mat[T_key, k_key] <- mean(df$sr_loss, na.rm = TRUE)
+      mean_pct_est_mat[T_key, k_key] <- mean(df$pct_est, na.rm = TRUE)
+      df$pct_sel <- with(df, ifelse(sr_loss != 0, sr_loss_selection / sr_loss * 100, NA))
+      mean_pct_sel_mat[T_key, k_key] <- mean(df$pct_sel, na.rm = TRUE)
+    }
+
+    # For each sample size T, create a summary plot comparing the Sharpe ratios across k.
+    summary_df <- data.frame(
+      k = rep(k_vals, each = 4),
+      type = factor(rep(c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)"),
+                        times = length(k_vals)),
+                    levels = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)")),
+      sharpe = NA_real_
+    )
+
+    T_key <- paste0("T=", T_val)
+    for (j in seq_along(k_vals)) {
+      k_val <- k_vals[j]
+      k_key <- paste0("k=", k_val)
+      # a) Population full MVE Sharpe ratio (theta_*)
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_*"] <- mve_sr
+      # b) Population sparse MVE Sharpe ratio (theta_{k,*})
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{k,*}"] <- mve_sr_sparse[[as.character(k_val)]]
+      # c) Adjusted sample MVE Sharpe ratio (theta_{H(hat(w)_k^{card})}) =
+      #    population sparse value minus (mean overall loss * (1 - mean % selection loss/100))
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{H(hat(w)_k^{card})}"] <-
+        mve_sr_sparse[[as.character(k_val)]] - (mean_sr_loss_mat[T_key, k_key] * (1 - mean_pct_sel_mat[T_key, k_key] / 100))
+      # d) Sample MVE Sharpe ratio (theta(w_k^card)) = population sparse value minus mean overall loss
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta(w_k^card)"] <-
+        mve_sr_sparse[[as.character(k_val)]] - mean_sr_loss_mat[T_key, k_key]
+    }
+
+    p_summary <- ggplot2::ggplot(summary_df, ggplot2::aes(x = k, y = sharpe, color = type, shape = type)) +
+      ggplot2::geom_line(size = 1.2) +
+      ggplot2::geom_point(size = 3) +
+      ggplot2::labs(title = paste("Sharpe Ratios for N =", N, ", T =", T_val),
+                    x = "Cardinality (k)", y = "Sharpe Ratio") +
+      ggplot2::scale_color_manual(
+        name = "Type",
+        values = c("theta_*" = "black",
+                   "theta_{k,*}" = "blue",
+                   "theta(w_k^card)" = "red",
+                   "theta_{H(hat(w)_k^{card})}" = "darkgreen"),
+        breaks = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)"),
+        labels = c(expression(theta["*"]),
+                   bquote(theta[italic(k) * "," * "*" ]),
+                   expression(theta[H(hat(w)[k]^"card")]),
+                   expression(theta(hat(w)[k]^"card")))
+      ) +
+      ggplot2::scale_shape_manual(
+        name = "Type",
+        values = c("theta_*" = 16,
+                   "theta_{k,*}" = 17,
+                   "theta(w_k^card)" = 15,
+                   "theta_{H(hat(w)_k^{card})}" = 18),
+        breaks = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)"),
+        labels = c(expression(theta["*"]),
+                   bquote(theta[italic(k) * "," * "*" ]),
+                   expression(theta[H(hat(w)[k]^"card")]),
+                   expression(theta(hat(w)[k]^"card")))
+      ) +
+      ggplot2::guides(color = ggplot2::guide_legend(), shape = ggplot2::guide_legend()) +
+      ggplot2::theme_minimal(base_size = 14) +
+      ggplot2::theme(axis.text = ggplot2::element_text(size = 14),
+                     axis.title = ggplot2::element_text(size = 16),
+                     plot.title = ggplot2::element_text(size = 18, face = "bold"),
+                     legend.title = ggplot2::element_text(size = 18),
+                     legend.text = ggplot2::element_text(size = 18))
+
+    print(p_summary)
+
+    # Save the summary plot.
+    summary_filename <- file.path(output_dir, paste0(f_name, "_t", T_val, "_summary.png"))
+    ggplot2::ggsave(summary_filename, p_summary, width = 8, height = 6, dpi = 300, bg = "white")
+  }
+
+  # Display the summary matrices.
+  cat("Mean Sharpe Ratio Loss:\n")
+  print(mean_sr_loss_mat)
+  cat("\nMean % Estimation Loss:\n")
+  print(mean_pct_est_mat)
+  cat("\nMean % Selection Loss:\n")
+  print(mean_pct_sel_mat)
+  cat("\nQuantiles of sr_loss - Lower (alpha/2):\n")
+  print(quant_sr_loss_lower)
+  cat("\nQuantiles of sr_loss - Upper (1-alpha/2):\n")
+  print(quant_sr_loss_upper)
+  cat("\nQuantiles of % Estimation Loss - Lower (alpha/2):\n")
+  print(quant_pct_est_lower)
+  cat("\nQuantiles of % Estimation Loss - Upper (1-alpha/2):\n")
+  print(quant_pct_est_upper)
+
+  return(list(mean_sr_loss_mat = mean_sr_loss_mat,
+              mean_pct_est_mat = mean_pct_est_mat,
+              mean_pct_sel_mat = mean_pct_sel_mat,
+              quant_sr_loss_lower = quant_sr_loss_lower,
+              quant_sr_loss_upper = quant_sr_loss_upper,
+              quant_pct_est_lower = quant_pct_est_lower,
+              quant_pct_est_upper = quant_pct_est_upper))
+}
