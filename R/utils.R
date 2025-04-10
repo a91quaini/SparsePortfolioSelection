@@ -69,3 +69,73 @@ load_data <- function(type = "p", do_checks = TRUE) {
     return(data)
   }
 }
+
+#' Simulate Sharpe Ratio Loss
+#'
+#' This function simulates a sample of size \code{n_obs} from a multivariate normal
+#' distribution with mean vector \code{mu} and covariance matrix \code{sigma}.
+#' It computes the sample mean vector (\code{mu_sample}) and the sample covariance matrix (\code{sigma_sample}),
+#' then calls \code{compute_sr_sparsity_loss} with the population and sample parameters,
+#' the maximum cardinality (\code{max_card}), and the maximum number of combinations (\code{max_comb}).
+#'
+#' @param mu A numeric vector; the population mean vector.
+#' @param sigma A numeric matrix; the population covariance matrix.
+#' @param n_obs An integer specifying the sample size to simulate.
+#' @param max_card Maximum cardinality to consider (from 1 up to the number of assets).
+#' @param max_comb Maximum number of combinations to consider. If 0 (default),
+#'                 all combinations are computed.
+#' @param do_checks Logical; if TRUE, input checks are performed.
+#'
+#' @return A list with \code{mve_sr_selection_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+#' where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio,
+#' and \code{mve_sr_estimation_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+#' where \code{w} are the optimal sample mve weights.
+#' @examples
+#' \dontrun{
+#' # Example with three assets:
+#' mu <- c(0.1, 0.2, 0.15)
+#'   sigma <- diag(3)
+#'   mve_sr <- 0.8
+#'   n_obs <- 100
+#'   max_card <- 2
+#'   result <- simulate_mve_sr(mu,
+#'                             sigma,
+#'                             n_obs,
+#'                             max_card,
+#'                             do_checks = TRUE)
+#'   print(result)
+#' }
+#' @export
+simulate_mve_sr <- function(mu, sigma, n_obs, max_card, max_comb = 0, do_checks = FALSE) {
+  # Perform input validation if do_checks is TRUE
+  if (do_checks) {
+    if (missing(mu) || length(mu) == 0 || !is.numeric(mu)) {
+      stop("mu must be provided and be a non-empty numeric vector")
+    }
+    if (missing(sigma) || !is.matrix(sigma) || nrow(sigma) == 0 || !is.numeric(sigma)) {
+      stop("sigma must be provided as a non-empty numeric matrix")
+    }
+    if (nrow(sigma) != ncol(sigma)) {
+      stop("sigma must be a square matrix")
+    }
+    if (length(mu) != nrow(sigma)) {
+      stop("The length of mu must equal the number of rows of sigma")
+    }
+    if (missing(n_obs) || !is.numeric(n_obs) || n_obs < 1) {
+      stop("n_obs must be a positive integer")
+    }
+    if (missing(max_card) || !is.numeric(max_card) || max_card < 1) {
+      stop("max_card must be a positive integer")
+    }
+    max_card <- as.integer(max_card)
+    if (max_card > length(mu)) {
+      stop("max_card cannot exceed the number of assets (length of mu)")
+    }
+    if (missing(max_comb) || !is.numeric(max_comb) || max_comb < 0) {
+      stop("max_comb must be a nonnegative numeric scalar")
+    }
+  }
+
+  .Call(`_SparsePortfolioSelection_simulate_mve_sr_cpp`, mu, sigma, n_obs, max_card, max_comb, FALSE)
+
+}

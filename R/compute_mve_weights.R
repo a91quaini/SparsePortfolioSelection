@@ -75,5 +75,5 @@ compute_mve_weights <- function(mu,
     }
   }
 
-  .Call(`_SparsePortfolioSelection_compute_mve_weights`, mu, second_moment, as.integer(selection - 1), gamma, FALSE)
+  .Call(`_SparsePortfolioSelection_compute_mve_weights_cpp`, mu, second_moment, as.integer(selection - 1), gamma, FALSE)
 }

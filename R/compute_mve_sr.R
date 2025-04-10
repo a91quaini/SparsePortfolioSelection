@@ -69,5 +69,5 @@ compute_mve_sr <- function(mu, sigma, selection, do_checks = FALSE) {
     }
   }
 
-  .Call(`_SparsePortfolioSelection_compute_mve_sr`, mu, sigma, as.integer(selection-1), FALSE)
+  .Call(`_SparsePortfolioSelection_compute_mve_sr_cpp`, mu, sigma, as.integer(selection-1), FALSE)
 }

@@ -1,83 +1,3 @@
-# Simulate Sharpe Ratio Loss
-#
-# This function serves as a wrapper that simulates a sample of returns from a multivariate normal
-# distribution with population mean vector \code{mu} and covariance matrix \code{sigma} (sample size \code{n_obs}),
-# then computes the sample mean vector and sample covariance matrix internally using a C++ implementation.
-# It then calls the Rcpp function \code{simulate_sr_loss_rcpp} (which uses the population parameters, the sample
-# estimates, a maximum cardinality (\code{max_card}), and a greedy percentage (\code{greedy_perc}))
-# to compute the Sharpe ratio loss.
-#
-# When \code{do_checks} is TRUE, input validation is performed to ensure that:
-# \code{mu} is a non-empty numeric vector; \code{sigma} is a non-empty numeric square matrix with dimensions matching \code{mu};
-# \code{n_obs} is a positive integer; \code{max_card} is a positive integer no larger than the length of \code{mu};
-# \code{greedy_perc} is nonnegative; and \code{mve_sr} is a finite numeric scalar.
-#
-# @param mve_sr A numeric scalar representing the population MVE Sharpe ratio.
-# @param mu Numeric vector; the population mean vector.
-# @param sigma Numeric matrix; the population covariance matrix.
-# @param n_obs Integer; the sample size to simulate.
-# @param max_card Positive integer; the maximum cardinality to consider.
-# @param greedy_perc Numeric scalar (default 1.0) indicating the fraction of combinations to evaluate.
-# @param do_checks Logical; if TRUE, performs input validation (default = FALSE).
-#
-# @return A list containing the Sharpe ratio loss measures as computed by the Rcpp function.
-#
-# @examples
-# \dontrun{
-# # Example with three assets:
-# mu <- c(0.1, 0.2, 0.15)
-#   sigma <- diag(3)
-#   mve_sr <- 0.8
-#   n_obs <- 100
-#   max_card <- 2
-#   result <- simulate_sr_loss(mve_sr,
-#                              mu,
-#                              sigma,
-#                              n_obs,
-#                              max_card,
-#                              greedy_perc = 1.0,
-#                              do_checks = TRUE)
-#   print(result)
-# }
-#
-# @export
-simulate_sr_loss <- function(mve_sr, mu, sigma, n_obs, max_card, greedy_perc = 1.0, do_checks = FALSE) {
-  # Perform input validation if do_checks is TRUE
-  if (do_checks) {
-    if (missing(mu) || length(mu) == 0 || !is.numeric(mu)) {
-      stop("mu must be provided and be a non-empty numeric vector")
-    }
-    if (missing(sigma) || !is.matrix(sigma) || nrow(sigma) == 0 || !is.numeric(sigma)) {
-      stop("sigma must be provided as a non-empty numeric matrix")
-    }
-    if (nrow(sigma) != ncol(sigma)) {
-      stop("sigma must be a square matrix")
-    }
-    if (length(mu) != nrow(sigma)) {
-      stop("The length of mu must equal the number of rows of sigma")
-    }
-    if (missing(n_obs) || !is.numeric(n_obs) || n_obs < 1) {
-      stop("n_obs must be a positive integer")
-    }
-    if (missing(max_card) || !is.numeric(max_card) || max_card < 1) {
-      stop("max_card must be a positive integer")
-    }
-    max_card <- as.integer(max_card)
-    if (max_card > length(mu)) {
-      stop("max_card cannot exceed the number of assets (length of mu)")
-    }
-    if (missing(greedy_perc) || !is.numeric(greedy_perc) || greedy_perc < 0) {
-      stop("greedy_perc must be a nonnegative numeric scalar")
-    }
-    if (!is.numeric(mve_sr) || length(mve_sr) != 1 || !is.finite(mve_sr)) {
-      stop("mve_sr must be a finite numeric scalar")
-    }
-  }
-
-  .Call(`_SparsePortfolioSelection_simulate_sr_loss`, mve_sr, mu, sigma, n_obs, max_card, greedy_perc, FALSE)
-
-}
-
 ################################################################################
 
 # Calibrate a Factor Model
@@ -158,7 +78,6 @@ simulate_sr_loss <- function(mve_sr, mu, sigma, n_obs, max_card, greedy_perc = 1
 #   print(model2$sigma)
 # }
 #
-# @export
 calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vol_type = 0, do_checks = FALSE) {
 
   # Perform input validation if do_checks is TRUE
@@ -211,6 +130,113 @@ calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vo
 
 ################################################################################
 
+# compute_simulation_results
+#
+# This function runs simulation experiments in parallel over a grid of parameters.
+# For each combination of 'n_obs' and 'max_card', it runs 'n_sim' simulations by
+# calling the 'simulate_sr_loss' function. The simulation results are organized into
+# a nested list keyed first by observation count and then by maximum cardinality.
+#
+# Parameters:
+#   n_obs           - A vector of observation counts to be used in the simulations.
+#   n_sim           - An integer specifying the number of simulations to run per parameter combination.
+#   mu              - A numeric vector or parameter required for the simulation.
+#   sigma           - A numeric vector or parameter required for the simulation.
+#   max_card        - A vector of maximum cardinality values.
+#   max_comb        - An integer specifying the maximum number of combinations to consider. Default is 0,
+#                     which means all combinations are computed.
+#   simulate_mve_sr - A function that performs a simulation run. It should accept the parameters:
+#                     mve_sr, mu, sigma, n_obs, and max_card, and return a list containing
+#                     'sr_loss', 'sr_loss_selection', and 'sr_loss_estimation'.
+#   seed            - An integer seed for random number generation for reproducibility (default is 123).
+#   save_results    - A boolean indicating whether to save the simulation results to a file (default is TRUE).
+#   file_name       - A string specifying the file name to save the results (default is "results_portfolios_1fm_n20.rds").
+#
+# Returns:
+#   A nested list where the results are organized by observation count and maximum cardinality.
+#   The structure is: results[[as.character(n_obs)]][[as.character(max_card)]],
+#   with each element being a matrix of simulation results (n_sim x 2).
+#
+# If 'save_results' is TRUE, the results will be saved to the file path:
+# "inst/simulations/results/<file_name>".
+#
+compute_simulation_results <- function(n_obs,
+                                       n_sim,
+                                       mu,
+                                       sigma,
+                                       max_card,
+                                       max_comb = 0,
+                                       simulate_sr_loss,
+                                       seed = 123,
+                                       save_results = TRUE,
+                                       file_name = "results_portfolios_1fm_n20.rds") {
+  # Set the seed for reproducibility
+  set.seed(seed)
+
+  # Create the parameter grid using the supplied n_obs and max_card vectors
+  param_grid <- expand.grid(n_obs = n_obs, max_card = max_card)
+
+  # Choose number of cores to use: all but one (at least one)
+  n_cores <- max(parallel::detectCores() - 1, 1)
+
+  # Run the simulation in parallel over each parameter combination.
+  # For each parameter combination the following is done:
+  #   1. For the given n_obs and max_card, run n_sim simulations.
+  #   2. Each simulation calls simulate_mve_sr using:
+  #      - mu and sigma,
+  #      - the current n_obs and max_card values.
+  #      - max_comb (if 0, all combinations are computed).
+  #   3. Each simulation returns a vector of two elements.
+  results_grid <- parallel::mclapply(1:nrow(param_grid), function(i) {
+    n_obs_val <- param_grid$n_obs[i]
+    max_card_val <- param_grid$max_card[i]
+
+    # Run n_sim simulations and collect results.
+    sim_results <- replicate(n_sim, {
+      output <- simulate_mve_sr(
+        mu = mu,
+        sigma = sigma,
+        n_obs = n_obs_val,
+        max_card = max_card_val,
+        max_comb = max_comb,
+        do_checks = FALSE
+      )
+      c(mve_sr_selection_term = output$mve_sr_selection_term,
+        mve_sr_estimation_term = output$mve_sr_estimation_term)
+    })
+
+    # transpose the simulation result matrix from 2 x n_sim to n_sim x 2.
+    sim_results <- t(sim_results)
+
+    # Return a list with the parameter values and simulation matrix.
+    list(n_obs = n_obs_val, max_card = max_card_val, sim_results = sim_results)
+  }, mc.cores = n_cores)
+
+  # Organize the results in a nested list keyed first by n_obs and then by max_card.
+  results <- list()
+  for (res in results_grid) {
+    n_obs_key <- as.character(res$n_obs)
+    max_card_key <- as.character(res$max_card)
+    if (is.null(results[[n_obs_key]]))
+      results[[n_obs_key]] <- list()
+    results[[n_obs_key]][[max_card_key]] <- res$sim_results
+  }
+
+  # Save the results to the specified file.
+  output_path <- file.path("inst", "simulations", "results", file_name)
+  # Save the results only if save_results is TRUE.
+  if (save_results) {
+    saveRDS(results, file = output_path)
+  }
+
+  # Return results invisibly (or you can simply return the results)
+  return(results)
+}
+
+
+
+################################################################################
+
 # evaluate_simulation_results
 #
 # This function loads simulation results from a given file,
@@ -228,7 +254,7 @@ calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vo
 #
 # Moreover, the function computes quantile tables: for each combination of T and k,
 # it computes the lower quantile at \(\alpha/2\) and the upper quantile at \(1-\alpha/2\)
-# for both the overall Sharpe ratio loss and the percentage estimation loss.
+# for both the overall Sharpe ratio loss and the percentage selection loss.
 #
 # The histogram and summary plots are saved as PNG files in "inst/simulations/figures".
 #
@@ -236,7 +262,7 @@ calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vo
 #   f_name        - Base file name (e.g., "portfolios_1fm_n20")
 #   N             - Number of assets (used for labeling)
 #   mve_sr        - Population full MVE Sharpe ratio (scalar)
-#   mve_sr_sparse - Named list with sparse MVE Sharpe ratios for each cardinality
+#   mve_sr_cardk - Named list with MVE Sharpe ratios for each max cardinality
 #                   (e.g., list("5" = ..., "10" = ..., "15" = ...))
 #   alpha         - Significance level for quantile computation (default 0.05)
 #
@@ -249,9 +275,8 @@ calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vo
 #     \item{quant_sr_loss_upper}{Matrix of the upper quantiles (\(1-\alpha/2\)) of Sharpe ratio loss.}
 #     \item{quant_pct_est_lower}{Matrix of the lower quantiles (\(\alpha/2\)) of percentage estimation loss.}
 #     \item{quant_pct_est_upper}{Matrix of the upper quantiles (\(1-\alpha/2\)) of percentage estimation loss.}
-#
 evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
-                                        mve_sr, mve_sr_sparse, alpha = 0.05) {
+                                        mve_sr, mve_sr_cardk, alpha = 0.05) {
   # Load the simulation results from file
   f_path <- file.path("inst", "simulations", "results", paste0("results_", f_name, ".rds"))
   results <- readRDS(f_path)
@@ -264,8 +289,6 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
   mean_sr_loss_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                              dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
   mean_pct_est_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
-                             dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
-  mean_pct_sel_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                              dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
 
   # Prepare empty matrices for quantiles (overall sr_loss and pct_est)
@@ -290,23 +313,26 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
   # Loop over each parameter combination to produce histograms and summary stats.
   for (T_val in T_vals) {
     for (k_val in k_vals) {
-      sim_matrix <- results[[as.character(T_val)]][[as.character(k_val)]]
-      if (is.null(sim_matrix)) next
+      sim_results <- results[[as.character(T_val)]][[as.character(k_val)]]
+      if (is.null(sim_results)) next
 
       # Create a data frame from the simulation matrix.
-      # Assumes sim_matrix has columns "sr_loss", "sr_loss_selection", "sr_loss_estimation".
-      df <- as.data.frame(sim_matrix)
+      # Assumes sim_results has columns "mve_sr_selection_term", "mve_sr_estimation_term"
+      df <- as.data.frame(sim_results)
 
-      # Compute percentage of estimation loss (if sr_loss is 0, set NA)
-      df$pct_est <- with(df, ifelse(sr_loss != 0, sr_loss_estimation / sr_loss * 100, NA))
+      # Compute the Sharpe ratio loss
+      df$sr_loss <- with(df, mve_sr_cardk - sim_results[, "mve_sr_estimation_term"])
+
+      # Compute percentage of selection loss (if sr_loss is 0, set 0)
+      df$pct_sel <- with(df, ifelse(sr_loss != 0, (mve_sr_cardk - sim_results[, "mve_sr_selection_term"]) / sr_loss * 100, 0))
 
       # Compute quantiles for sr_loss and pct_est
       T_key <- paste0("T=", T_val)
       k_key <- paste0("k=", k_val)
       quant_sr_loss_lower[T_key, k_key] <- as.numeric(quantile(df$sr_loss, probs = alpha/2, na.rm = TRUE))
       quant_sr_loss_upper[T_key, k_key] <- as.numeric(quantile(df$sr_loss, probs = 1 - alpha/2, na.rm = TRUE))
-      quant_pct_est_lower[T_key, k_key] <- as.numeric(quantile(df$pct_est, probs = alpha/2, na.rm = TRUE))
-      quant_pct_est_upper[T_key, k_key] <- as.numeric(quantile(df$pct_est, probs = 1 - alpha/2, na.rm = TRUE))
+      quant_pct_sel_lower[T_key, k_key] <- as.numeric(quantile(df$pct_sel, probs = alpha/2, na.rm = TRUE))
+      quant_pct_sel_upper[T_key, k_key] <- as.numeric(quantile(df$pct_sel, probs = 1 - alpha/2, na.rm = TRUE))
 
       # Create ggplot for overall Sharpe ratio loss with a gray fill and enlarged text.
       p1 <- ggplot2::ggplot(df, ggplot2::aes(x = sr_loss)) +
@@ -320,11 +346,11 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
                        axis.title = ggplot2::element_text(size = 16),
                        plot.title = ggplot2::element_text(size = 18, face = "bold"))
 
-      # Create ggplot for percentage estimation loss with a gray fill and enlarged text.
-      p2 <- ggplot2::ggplot(df, ggplot2::aes(x = pct_est)) +
+      # Create ggplot for percentage selection loss with a gray fill and enlarged text.
+      p2 <- ggplot2::ggplot(df, ggplot2::aes(x = pct_sel)) +
         ggplot2::geom_histogram(fill = "grey70", color = "black", bins = 30) +
-        ggplot2::labs(title = paste("% Estimation Loss: N =", N, ", T =", T_val, "and k =", k_val),
-                      x = "Percentage Estimation Loss", y = "Frequency") +
+        ggplot2::labs(title = paste("% Selection Loss: N =", N, ", T =", T_val, "and k =", k_val),
+                      x = "Percentage Selection Loss", y = "Frequency") +
         ggplot2::theme_minimal(base_size = 14) +
         ggplot2::theme(axis.text = ggplot2::element_text(size = 14),
                        axis.title = ggplot2::element_text(size = 16),
@@ -342,9 +368,8 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
 
       # Compute mean overall sr_loss and mean percentages, removing NAs.
       mean_sr_loss_mat[T_key, k_key] <- mean(df$sr_loss, na.rm = TRUE)
-      mean_pct_est_mat[T_key, k_key] <- mean(df$pct_est, na.rm = TRUE)
-      df$pct_sel <- with(df, ifelse(sr_loss != 0, sr_loss_selection / sr_loss * 100, NA))
       mean_pct_sel_mat[T_key, k_key] <- mean(df$pct_sel, na.rm = TRUE)
+
     }
 
     # For each sample size T, create a summary plot comparing the Sharpe ratios across k.
@@ -364,13 +389,12 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_*"] <- mve_sr
       # b) Population sparse MVE Sharpe ratio (theta_{k,*})
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{k,*}"] <- mve_sr_sparse[[as.character(k_val)]]
-      # c) Adjusted sample MVE Sharpe ratio (theta_{H(hat(w)_k^{card})}) =
-      #    population sparse value minus (mean overall loss * (1 - mean % selection loss/100))
+      # c) Adjusted sample MVE Sharpe ratio (theta_{H(hat(w)_k^{card})})
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{H(hat(w)_k^{card})}"] <-
-        mve_sr_sparse[[as.character(k_val)]] - (mean_sr_loss_mat[T_key, k_key] * (1 - mean_pct_sel_mat[T_key, k_key] / 100))
-      # d) Sample MVE Sharpe ratio (theta(w_k^card)) = population sparse value minus mean overall loss
+        mean(sim_results[, "mve_sr_selection_term"], na.rm = TRUE)
+      # d) Sample MVE Sharpe ratio (theta(w_k^card))
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta(w_k^card)"] <-
-        mve_sr_sparse[[as.character(k_val)]] - mean_sr_loss_mat[T_key, k_key]
+        mean(sim_results[, "mve_sr_estimation_term"], na.rm = TRUE)
     }
 
     p_summary <- ggplot2::ggplot(summary_df, ggplot2::aes(x = k, y = sharpe, color = type, shape = type)) +
@@ -420,129 +444,21 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
   # Display the summary matrices.
   cat("Mean Sharpe Ratio Loss:\n")
   print(mean_sr_loss_mat)
-  cat("\nMean % Estimation Loss:\n")
-  print(mean_pct_est_mat)
-  cat("\nMean % Selection Loss:\n")
-  print(mean_pct_sel_mat)
   cat("\nQuantiles of sr_loss - Lower (alpha/2):\n")
   print(quant_sr_loss_lower)
-  cat("\nQuantiles of sr_loss - Upper (1-alpha/2):\n")
+  cat("\nQuantiles of sr_loss + Upper (1-alpha/2):\n")
   print(quant_sr_loss_upper)
-  cat("\nQuantiles of % Estimation Loss - Lower (alpha/2):\n")
+  cat("\nMean % Selection Loss:\n")
+  print(mean_pct_sel_mat)
+  cat("\nQuantiles of % Selection Loss - Lower (alpha/2):\n")
   print(quant_pct_est_lower)
-  cat("\nQuantiles of % Estimation Loss - Upper (1-alpha/2):\n")
+  cat("\nQuantiles of % Selection Loss + Upper (1-alpha/2):\n")
   print(quant_pct_est_upper)
 
   return(list(mean_sr_loss_mat = mean_sr_loss_mat,
-              mean_pct_est_mat = mean_pct_est_mat,
-              mean_pct_sel_mat = mean_pct_sel_mat,
               quant_sr_loss_lower = quant_sr_loss_lower,
               quant_sr_loss_upper = quant_sr_loss_upper,
-              quant_pct_est_lower = quant_pct_est_lower,
-              quant_pct_est_upper = quant_pct_est_upper))
+              mean_pct_sel_mat = mean_pct_sel_mat,
+              quant_pct_sel_lower = quant_pct_sel_lower,
+              quant_pct_sel_upper = quant_pct_sel_upper))
 }
-
-################################################################################
-
-# compute_simulation_results
-#
-# This function runs simulation experiments in parallel over a grid of parameters.
-# For each combination of 'n_obs' and 'max_card', it runs 'n_sim' simulations by
-# calling the 'simulate_sr_loss' function. The simulation results are organized into
-# a nested list keyed first by observation count and then by maximum cardinality.
-#
-# Parameters:
-#   n_obs           - A vector of observation counts to be used in the simulations.
-#   max_card        - A vector of maximum cardinality values.
-#   n_sim           - An integer specifying the number of simulations to run per parameter combination.
-#   mve_sr_sparse   - A list of precomputed sparse MVE Sharpe ratios indexed by cardinality (as characters).
-#   mu              - A numeric vector or parameter required for the simulation.
-#   sigma           - A numeric vector or parameter required for the simulation.
-#   simulate_sr_loss- A function that performs a simulation run. It should accept the parameters:
-#                     mve_sr, mu, sigma, n_obs, and max_card, and return a list containing
-#                     'sr_loss', 'sr_loss_selection', and 'sr_loss_estimation'.
-#   seed            - An integer seed for random number generation for reproducibility (default is 123).
-#   save_results    - A boolean indicating whether to save the simulation results to a file (default is TRUE).
-#   file_name       - A string specifying the file name to save the results (default is "results_portfolios_1fm_n20.rds").
-#
-# Returns:
-#   A nested list where the results are organized by observation count and maximum cardinality.
-#   The structure is: results[[as.character(n_obs)]][[as.character(max_card)]],
-#   with each element being a matrix of simulation results (n_sim x 3).
-#
-# If 'save_results' is TRUE, the results will be saved to the file path:
-# "inst/simulations/results/<file_name>".
-#
-compute_simulation_results <- function(n_obs,
-                                       max_card,
-                                       n_sim,
-                                       mve_sr_sparse,
-                                       mu,
-                                       sigma,
-                                       simulate_sr_loss,
-                                       seed = 123,
-                                       save_results = TRUE,
-                                       file_name = "results_portfolios_1fm_n20.rds") {
-  # Set the seed for reproducibility
-  set.seed(seed)
-
-  # Create the parameter grid using the supplied n_obs and max_card vectors
-  param_grid <- expand.grid(n_obs = n_obs, max_card = max_card)
-
-  # Choose number of cores to use: all but one (at least one)
-  n_cores <- max(parallel::detectCores() - 1, 1)
-
-  # Run the simulation in parallel over each parameter combination.
-  # For each parameter combination the following is done:
-  #   1. For the given n_obs and max_card, run n_sim simulations.
-  #   2. Each simulation calls simulate_sr_loss using:
-  #      - mve_sr_sparse$sr,
-  #      - mu and sigma,
-  #      - the current n_obs and max_card values.
-  #   3. Each simulation returns a vector of three elements.
-  results_grid <- parallel::mclapply(1:nrow(param_grid), function(i) {
-    n_obs_val <- param_grid$n_obs[i]
-    max_card_val <- param_grid$max_card[i]
-
-    # Run n_sim simulations and collect results.
-    sim_results <- replicate(n_sim, {
-      output <- simulate_sr_loss(
-        mve_sr = mve_sr_sparse[[as.character(max_card_val)]],
-        mu = mu,
-        sigma = sigma,
-        n_obs = n_obs_val,
-        max_card = max_card_val
-      )
-      c(sr_loss = output$sr_loss,
-        sr_loss_selection = output$sr_loss_selection,
-        sr_loss_estimation = output$sr_loss_estimation)
-    })
-
-    # transpose the simulation result matrix from 3 x n_sim to n_sim x 3.
-    sim_matrix <- t(sim_results)
-
-    # Return a list with the parameter values and simulation matrix.
-    list(n_obs = n_obs_val, max_card = max_card_val, sim_matrix = sim_matrix)
-  }, mc.cores = n_cores)
-
-  # Organize the results in a nested list keyed first by n_obs and then by max_card.
-  results <- list()
-  for (res in results_grid) {
-    n_obs_key <- as.character(res$n_obs)
-    max_card_key <- as.character(res$max_card)
-    if (is.null(results[[n_obs_key]]))
-      results[[n_obs_key]] <- list()
-    results[[n_obs_key]][[max_card_key]] <- res$sim_matrix
-  }
-
-  # Save the results to the specified file.
-  output_path <- file.path("inst", "simulations", "results", file_name)
-  # Save the results only if save_results is TRUE.
-  if (save_results) {
-    saveRDS(results, file = output_path)
-  }
-
-  # Return results invisibly (or you can simply return the results)
-  return(results)
-}
-

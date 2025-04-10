@@ -6,8 +6,9 @@
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
+////////////////////////////////////////////////////////////////////////////////
 // Compute Portfolio Sharpe Ratio: (w^T mu) / sqrt(w^T sigma w)
-double compute_sr(const arma::vec& weights,
+double compute_sr_cpp(const arma::vec& weights,
                   const arma::vec& mu,
                   const arma::mat& sigma,
                   const bool do_checks) {
@@ -35,14 +36,15 @@ double compute_sr(const arma::vec& weights,
   }
 
   // Compute the Sharpe ratio: (w^T mu) / sqrt(w^T sigma w)
-  return arma::dot(weights, mu) / std::sqrt(arma::as_scalar(weights.t() * sigma * weights));
+  return arma::dot(weights, mu) / std::sqrt(arma::dot(weights, sigma * weights));
 }
 
+////////////////////////////////////////////////////////////////////////////////
 // Compute Optimal Portfolio Sharpe Ratio (MVE)
-double compute_mve_sr(const arma::vec& mu,
-                      const arma::mat& sigma,
-                      const arma::uvec& selection,
-                      const bool do_checks) {
+double compute_mve_sr_cpp(const arma::vec& mu,
+                          const arma::mat& sigma,
+                          const arma::uvec& selection,
+                          const bool do_checks) {
 
   // Optional input checks.
   if (do_checks) {
@@ -67,19 +69,18 @@ double compute_mve_sr(const arma::vec& mu,
 
   // Otherwise, subset the inputs according to the asset selection.
   const arma::vec mu_sel = mu.elem(selection);
-  const arma::mat sigma_sel = sigma.submat(selection, selection);
-
-  return std::sqrt( arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel)) );
+  return std::sqrt( arma::dot(mu_sel, arma::solve(
+      sigma.submat(selection, selection), mu_sel)) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // Compute Mean-Variance Efficient Portfolio Weights
-arma::vec compute_mve_weights(const arma::vec& mu,
-                              const arma::mat& second_moment,
-                              const arma::uvec& selection,
-                              const double gamma,
-                              const bool do_checks) {
+arma::vec compute_mve_weights_cpp(const arma::vec& mu,
+                                  const arma::mat& second_moment,
+                                  const arma::uvec& selection,
+                                  const double gamma,
+                                  const bool do_checks) {
 
   // Optional input checks.
   if (do_checks) {
@@ -115,12 +116,12 @@ arma::vec compute_mve_weights(const arma::vec& mu,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Compute Highest Sharpe Ratio with Cardinality Constraint (sparse MVE)
-Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
-                                 const arma::mat& sigma,
-                                 unsigned int max_card,
-                                 const double greedy_perc,
-                                 const bool do_checks) {
+// Compute Highest Sharpe Ratio with Cardinality K
+Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
+                                    const arma::mat& sigma,
+                                    const unsigned int max_card,
+                                    const unsigned int max_comb,
+                                    const bool do_checks) {
   // Input checks.
   if (do_checks) {
     if (mu.n_elem == 0 || sigma.n_elem == 0) {
@@ -132,26 +133,23 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
     if (mu.n_elem != sigma.n_rows) {
       Rcpp::stop("Mean vector length must equal the dimensions of the covariance matrix");
     }
+    if (max_card < 1 || max_card > mu.n_elem) {
+      Rcpp::stop("max_card must be between 1 and the number of assets");
+    }
+    if (max_comb < 0) {
+      Rcpp::stop("max_comb must be non-negative");
+    }
   }
 
-  // If max_card is 0, return empty selection.
-  if (greedy_perc <= 0.0 || max_card == 0) {
-    return Rcpp::List::create(Rcpp::Named("sqsr") = 0.0,
-                              Rcpp::Named("selection") = arma::uvec());
-  }
-
-  // If max_card is greater than the number of assets, set it to the number of assets.
+  // Set number of assets
   const unsigned int n = mu.n_elem;
-  if (max_card > n) {
-    max_card = n;
-  }
 
-  // Initialize variables to store the best square Sharpe ratio and selection.
-  double mve_sr = -std::numeric_limits<double>::infinity();
+  // Initialize variables to store the best Sharpe ratio and selection.
+  double mve_sr = 0.0;
   arma::uvec mve_selection;
 
-  // If greedy_perc is greater or equal to 1.0, evaluate all combinations for each cardinality.
-  if (greedy_perc >= 1.0) {
+  // If max_comb is equal to 0, evaluate all combinations for each cardinality.
+  if (max_comb == 0) {
     for (unsigned int k = 1; k <= max_card; k++) {
       // Generate all combinations of k indices from {0,1,...,n-1}.
       std::vector<arma::uvec> all_combs;
@@ -159,15 +157,15 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
       // Generate combinations.
       generate_combinations(n, k, 0, current, all_combs);
 
-      // For each combination, compute the square Sharpe ratio.
+      // For each combination, compute the Sharpe ratio.
       for (size_t i = 0; i < all_combs.size(); i++) {
         // Select the current combination.
         const arma::uvec sel = all_combs[i];
-        // Compute the square Sharpe ratio for the selected combination.
+        // Compute the Sharpe ratio for the selected combination.
         const arma::vec mu_sel = mu.elem(sel);
         const double current_sr = std::sqrt(
           arma::dot(mu_sel, arma::solve(sigma.submat(sel, sel), mu_sel)) );
-        // Update the maximum square Sharpe ratio and selection if current is better.
+        // Update the maximum Sharpe ratio and selection if current is better.
         if (current_sr > mve_sr) {
           mve_sr = current_sr;
           mve_selection = sel;
@@ -177,25 +175,22 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
 
     // Otherwise, evaluate a random sample of combinations for each cardinality.
   } else {
-    for (unsigned int k = 1; k <= max_card; k++) {
-      // Generate a random sample of combinations.
-      const unsigned long long total_comb = nCk(n, k);
-      // Calculate the number of combinations to evaluate.
-      const unsigned long long num_to_eval = std::max(
-        static_cast<unsigned long long>(std::floor(greedy_perc * total_comb)),
-        static_cast<unsigned long long>(1));
+    // Set indices from 0 to n-1.
+    const arma::uvec indices = arma::regspace<arma::uvec>(0, n - 1);
 
-      for (unsigned long long i = 0; i < num_to_eval; i++) {
+    for (unsigned int k = 1; k <= max_card; k++) {
+      for (unsigned int i = 0; i < max_comb; i++) {
         // Generate a random combination of k distinct indices from 0 to n-1.
-        const arma::uvec sel = random_combination(n, k);
-        const arma::vec mu_sel = mu.elem(sel);
-        // Compute the square Sharpe ratio for the selected combination.
+        const arma::uvec shuffled_indices = arma::shuffle(indices);
+        const arma::uvec sel_k = shuffled_indices.head(k);
+        const arma::vec mu_sel = mu.elem(sel_k);
+        // Compute the Sharpe ratio for the selected combination.
         const double current_sr = std::sqrt(
-          arma::dot(mu_sel, arma::solve( sigma.submat(sel, sel), mu_sel)) );
-        // Update the maximum square Sharpe ratio and selection if current is better.
+          arma::dot(mu_sel, arma::solve( sigma.submat(sel_k, sel_k), mu_sel)) );
+        // Update the maximum Sharpe ratio and selection if current is better.
         if (current_sr > mve_sr) {
           mve_sr = current_sr;
-          mve_selection = sel;
+          mve_selection = sel_k;
         }
       }
     }
@@ -208,14 +203,13 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
-                                    const arma::vec& mu,
-                                    const arma::mat& sigma,
-                                    const arma::vec& mu_sample,
-                                    const arma::mat& sigma_sample,
-                                    unsigned int max_card,
-                                    const double greedy_perc,
-                                    const bool do_checks) {
+Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
+                                            const arma::mat& sigma,
+                                            const arma::vec& mu_sample,
+                                            const arma::mat& sigma_sample,
+                                            const unsigned int max_card,
+                                            const unsigned int max_comb,
+                                            const bool do_checks) {
 
   // Check if the input parameters are valid
   if (do_checks) {
@@ -243,57 +237,52 @@ Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
     if (mu_sample.n_elem != sigma_sample.n_rows) {
       Rcpp::stop("Length of mu_sample must equal number of rows of sigma_sample");
     }
-    if (max_card < 1 || max_card > mu_sample.n_elem) {
-      Rcpp::stop("max_card must be between 1 and the number of assets in mu_sample");
+    if (max_card < 1 || max_card > mu.n_elem) {
+      Rcpp::stop("max_card must be between 1 and the number of assets");
     }
-    if (greedy_perc < 0) {
-      Rcpp::stop("greedy_perc must be non-negative");
-    }
-    if (!std::isfinite(mve_sr)) {
-      Rcpp::stop("mve_sr must be a finite number");
+    if (max_comb < 0) {
+      Rcpp::stop("max_comb must be non-negative");
     }
   }
 
-  // 1. Compute population Sharpe ratio of sample sparse mve portfolio
+  // Compute the sample MVE Sharpe ratio with max cardinality k
+  const Rcpp::List sample_mve_cardk = compute_mve_sr_cardk_cpp(mu_sample,
+                                                               sigma_sample,
+                                                               max_card,
+                                                               max_comb,
+                                                               false);
+  // Compute the sample MVE portfolio weights with max cardinality k
+  const arma::vec sample_mve_weights = compute_mve_weights_cpp(mu_sample,
+                                                               sigma_sample + mu_sample * mu_sample.t(),
+                                                               sample_mve_cardk["selection"],
+                                                               1.0,
+                                                               false);
+  // 1. Compute the population MVE Sharpe ratio estimation term
+  const double mve_sr_estimation_term = compute_sr_cpp(sample_mve_weights,
+                                                       mu,
+                                                       sigma,
+                                                       false);
 
-  // Compute the sample sparse MVE portfolio
-  const Rcpp::List mve_sparse_sample = compute_sparse_mve_sr(mu_sample,
-                                                             sigma_sample,
-                                                             max_card,
-                                                             greedy_perc,
-                                                             false);
-  // Compute the sample sparse MVE portfolio weights
-  const arma::vec mve_sparse_weights_sample = compute_mve_weights(mu_sample,
-                                                                  sigma_sample + mu_sample * mu_sample.t(),
-                                                                  mve_sparse_sample["selection"],
-                                                                  1.0,
-                                                                  false);
-  // Compute the population Sharpe ratio of the sample sparse MVE portfolio
-  const double mve_sr_sparse_sample = compute_sr(mve_sparse_weights_sample,
-                                                 mu,
-                                                 sigma,
-                                                 false);
-
-  // 2. Compute population MVE Sharpe ratio based on the sample selection of the sample sparse mve portfolio
-  const double mve_sr_sel_sample = compute_mve_sr(mu,
-                                                  sigma,
-                                                  mve_sparse_sample["selection"],
-                                                  false);
+  // 2. Compute the population MVE Sharpe ratio selection term
+  const double mve_sr_selection_term = compute_mve_sr_cpp(mu,
+                                                          sigma,
+                                                          sample_mve_cardk["selection"],
+                                                          false);
 
   // Compute the Sharpe ratio loss
-  return Rcpp::List ::create(Rcpp::Named("sr_loss") = mve_sr - mve_sr_sparse_sample,
-                             Rcpp::Named("sr_loss_selection") = mve_sr - mve_sr_sel_sample,
-                             Rcpp::Named("sr_loss_estimation") = mve_sr_sel_sample - mve_sr_sparse_sample);
+  return Rcpp::List ::create(Rcpp::Named("mve_sr_estimation_term") = mve_sr_estimation_term,
+                             Rcpp::Named("mve_sr_selection_term") = mve_sr_selection_term);
 
 }
 
-Rcpp::List simulate_sr_loss(const double mve_sr,
-                            const arma::vec& mu,
-                            const arma::mat& sigma,
-                            const unsigned int n_obs,
-                            const unsigned int max_card,
-                            const double greedy_perc,
-                            const bool do_checks) {
+////////////////////////////////////////////////////////////////////////////////
+
+Rcpp::List simulate_mve_sr_cpp(const arma::vec& mu,
+                               const arma::mat& sigma,
+                               const unsigned int n_obs,
+                               const unsigned int max_card,
+                               const unsigned int max_comb,
+                               const bool do_checks) {
 
   // Check if the input parameters are valid
   if (do_checks) {
@@ -310,28 +299,22 @@ Rcpp::List simulate_sr_loss(const double mve_sr,
       Rcpp::stop("Length of mu must equal number of rows of sigma");
     }
     if (max_card < 1 || max_card > mu.n_elem) {
-      Rcpp::stop("max_card must be between 1 and the number of assets in mu_sample");
+      Rcpp::stop("max_card must be between 1 and the number of assets");
     }
-    if (greedy_perc < 0) {
-      Rcpp::stop("greedy_perc must be non-negative");
-    }
-    if (!std::isfinite(mve_sr)) {
-      Rcpp::stop("mve_sr must be a finite number");
+    if (max_comb < 0) {
+      Rcpp::stop("max_comb must be non-negative");
     }
   }
 
  // Simulate sample data from a multivariate normal with mean mu and covariance sigma.
  const arma::mat sample = arma::mvnrnd(mu, sigma, n_obs);
 
- // Transpose the sample to get an n_obs x d matrix.
- const arma::mat X = sample.t();
-
  // Compute the sample mean (as a column vector)
  const arma::vec mu_sample = arma::mean(sample, 1);
 
  // Compute the sample covariance matrix.
- const arma::mat sigma_sample = arma::cov(X);
+ const arma::mat sigma_sample = arma::cov(sample.t());
 
- // Compute the Sharpe ratio loss
- return compute_sr_sparsity_loss(mve_sr, mu, sigma, mu_sample, sigma_sample, max_card, greedy_perc, do_checks);
+ // Compute the MVE Sharpe ratio decomposition
+ return compute_mve_sr_decomposition_cpp(mu, sigma, mu_sample, sigma_sample, max_card, max_comb, false);
 }

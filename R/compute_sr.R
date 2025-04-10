@@ -54,5 +54,5 @@ compute_sr <- function(weights, mu, sigma, do_checks = FALSE) {
     }
   }
 
-  .Call(`_SparsePortfolioSelection_compute_sr`, weights, mu, sigma, FALSE)
+  .Call(`_SparsePortfolioSelection_compute_sr_cpp`, weights, mu, sigma, FALSE)
 }
