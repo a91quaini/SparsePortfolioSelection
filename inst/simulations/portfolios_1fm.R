@@ -48,10 +48,10 @@ n_obs <- c(10, 15, 20, 50, 100)
 max_card <- c(5, 10, 15)
 
 # Compute the population mean-variance efficient Sharpe ratio with cardinality constraints
-mve_sr_sparse <- list()
+mve_sr_cardk <- list()
 for (card in max_card) {
   # Compute the sparse MVE Sharpe ratio for the current cardinality
-  mve_sr_sparse[[as.character(card)]] <- compute_sparse_mve_sr(mu, sigma, card)$sr
+  mve_sr_cardk[[as.character(card)]] <- compute_mve_sr_cardk(mu, sigma, card)$sr
 }
 
 ################################################################################
@@ -59,29 +59,30 @@ for (card in max_card) {
 ################################################################################
 #### Compute simulations
 #### This part of the code takes time. Instead of running it you can source
-#### the results from the file "results_portfolios_1fm_n20.rds" in the "inst/simulations/results" folder
+#### the results from the file "results_portfolios_1fm_n20_weak05.rds" in the "inst/simulations/results" folder
 #### This is done below at ####*
 
 compute_simulation_results(n_obs = n_obs,
-                           max_card = max_card,,
                            n_sim = n_sim,
-                           mve_sr_sparse = mve_sr_sparse,
                            mu = mu,
                            sigma = sigma,
-                           simulate_sr_loss = simulate_sr_loss,
+                           max_card = max_card,
+                           max_comb = 0,
+                           simulate_mve_sr = simulate_mve_sr,
                            seed = 123,
+                           save_results = TRUE,
                            file_name = "results_portfolios_1fm_n20.rds")
 
 ################################################################################
 #### ----> End of the computation part
-
+################################################################################
 
 
 ####* Evaluate the results
-results <- evaluate_simulation_results(f_name = "portfolios_1fm_n20",
-                            N = n_returns,
-                            mve_sr = mve_sr,
-                            mve_sr_sparse = mve_sr_sparse)
+evaluation <- evaluate_simulation_results(f_name = "portfolios_1fm_n20",
+                                          N = n_returns,
+                                          mve_sr = mve_sr,
+                                          mve_sr_cardk = mve_sr_cardk)
 
 
 
@@ -117,17 +118,17 @@ sigma <- model$sigma
 mve_sr <- compute_mve_sr(mu, sigma, 1:n_returns)
 
 # Set simulation parameters
-n_sim <- 1000
+n_sim <- 3
 # Set the various sample sizes
 n_obs <- c(10, 15, 20, 50, 100)
 # Set the various cardinality constraints
 max_card <- c(5, 10, 15)
 
 # Compute the population mean-variance efficient Sharpe ratio with cardinality constraints
-mve_sr_sparse <- list()
+mve_sr_cardk <- list()
 for (card in max_card) {
   # Compute the sparse MVE Sharpe ratio for the current cardinality
-  mve_sr_sparse[[as.character(card)]] <- compute_sparse_mve_sr(mu, sigma, card)$sr
+  mve_sr_cardk[[as.character(card)]] <- compute_mve_sr_cardk(mu, sigma, card)$sr
 }
 
 ################################################################################
@@ -139,13 +140,14 @@ for (card in max_card) {
 #### This is done below at ####*
 
 compute_simulation_results(n_obs = n_obs,
-                           max_card = max_card,,
                            n_sim = n_sim,
-                           mve_sr_sparse = mve_sr_sparse,
                            mu = mu,
                            sigma = sigma,
-                           simulate_sr_loss = simulate_sr_loss,
+                           max_card = max_card,
+                           max_comb = 0,
+                           simulate_mve_sr = simulate_mve_sr,
                            seed = 123,
+                           save_results = TRUE,
                            file_name = "results_portfolios_1fm_n20_weak05.rds")
 
 ################################################################################
@@ -154,8 +156,8 @@ compute_simulation_results(n_obs = n_obs,
 
 
 ####* Evaluate the results
-results <- evaluate_simulation_results(f_name = "portfolios_1fm_n20_weak05",
-                            N = n_returns,
-                            mve_sr = mve_sr,
-                            mve_sr_sparse = mve_sr_sparse)
+evaluation <- evaluate_simulation_results(f_name = "portfolios_1fm_n20_weak05",
+                                       N = n_returns,
+                                       mve_sr = mve_sr,
+                                       mve_sr_cardk = mve_sr_cardk)
 

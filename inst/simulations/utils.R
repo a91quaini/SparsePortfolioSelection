@@ -166,7 +166,7 @@ compute_simulation_results <- function(n_obs,
                                        sigma,
                                        max_card,
                                        max_comb = 0,
-                                       simulate_sr_loss,
+                                       simulate_mve_sr,
                                        seed = 123,
                                        save_results = TRUE,
                                        file_name = "results_portfolios_1fm_n20.rds") {
@@ -275,8 +275,11 @@ compute_simulation_results <- function(n_obs,
 #     \item{quant_sr_loss_upper}{Matrix of the upper quantiles (\(1-\alpha/2\)) of Sharpe ratio loss.}
 #     \item{quant_pct_est_lower}{Matrix of the lower quantiles (\(\alpha/2\)) of percentage estimation loss.}
 #     \item{quant_pct_est_upper}{Matrix of the upper quantiles (\(1-\alpha/2\)) of percentage estimation loss.}
-evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
-                                        mve_sr, mve_sr_cardk, alpha = 0.05) {
+evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
+                                        N = 20,
+                                        mve_sr,
+                                        mve_sr_cardk,
+                                        alpha = 0.05) {
   # Load the simulation results from file
   f_path <- file.path("inst", "simulations", "results", paste0("results_", f_name, ".rds"))
   results <- readRDS(f_path)
@@ -288,7 +291,7 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
   # Prepare empty matrices to store summary statistics
   mean_sr_loss_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                              dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
-  mean_pct_est_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+  mean_pct_sel_mat <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                              dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
 
   # Prepare empty matrices for quantiles (overall sr_loss and pct_est)
@@ -296,9 +299,9 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
                                 dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
   quant_sr_loss_upper <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                                 dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
-  quant_pct_est_lower <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+  quant_pct_sel_lower <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                                 dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
-  quant_pct_est_upper <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
+  quant_pct_sel_upper <- matrix(NA, nrow = length(T_vals), ncol = length(k_vals),
                                 dimnames = list(paste0("T=", T_vals), paste0("k=", k_vals)))
 
   # Directory to save figures.
@@ -321,10 +324,10 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
       df <- as.data.frame(sim_results)
 
       # Compute the Sharpe ratio loss
-      df$sr_loss <- with(df, mve_sr_cardk - sim_results[, "mve_sr_estimation_term"])
+      df$sr_loss <- with(df, mve_sr_cardk[[as.character(k_val)]] - sim_results[, "mve_sr_estimation_term"])
 
       # Compute percentage of selection loss (if sr_loss is 0, set 0)
-      df$pct_sel <- with(df, ifelse(sr_loss != 0, (mve_sr_cardk - sim_results[, "mve_sr_selection_term"]) / sr_loss * 100, 0))
+      df$pct_sel <- with(df, ifelse(sr_loss != 0, (mve_sr_cardk[[as.character(k_val)]] - sim_results[, "mve_sr_selection_term"]) / df$sr_loss * 100, 0))
 
       # Compute quantiles for sr_loss and pct_est
       T_key <- paste0("T=", T_val)
@@ -382,13 +385,13 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
     )
 
     T_key <- paste0("T=", T_val)
-    for (j in seq_along(k_vals)) {
-      k_val <- k_vals[j]
+    for (k_val in k_vals) {
       k_key <- paste0("k=", k_val)
+      sim_results <- results[[as.character(T_val)]][[as.character(k_val)]]
       # a) Population full MVE Sharpe ratio (theta_*)
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_*"] <- mve_sr
       # b) Population sparse MVE Sharpe ratio (theta_{k,*})
-      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{k,*}"] <- mve_sr_sparse[[as.character(k_val)]]
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{k,*}"] <- mve_sr_cardk[[as.character(k_val)]]
       # c) Adjusted sample MVE Sharpe ratio (theta_{H(hat(w)_k^{card})})
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{H(hat(w)_k^{card})}"] <-
         mean(sim_results[, "mve_sr_selection_term"], na.rm = TRUE)
@@ -406,8 +409,8 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
         name = "Type",
         values = c("theta_*" = "black",
                    "theta_{k,*}" = "blue",
-                   "theta(w_k^card)" = "red",
-                   "theta_{H(hat(w)_k^{card})}" = "darkgreen"),
+                   "theta_{H(hat(w)_k^{card})}" = "darkgreen",
+                   "theta(w_k^card)" = "red"),
         breaks = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)"),
         labels = c(expression(theta["*"]),
                    bquote(theta[italic(k) * "," * "*" ]),
@@ -418,8 +421,8 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
         name = "Type",
         values = c("theta_*" = 16,
                    "theta_{k,*}" = 17,
-                   "theta(w_k^card)" = 15,
-                   "theta_{H(hat(w)_k^{card})}" = 18),
+                   "theta_{H(hat(w)_k^{card})}" = 18,
+                   "theta(w_k^card)" = 15),
         breaks = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)"),
         labels = c(expression(theta["*"]),
                    bquote(theta[italic(k) * "," * "*" ]),
@@ -451,9 +454,9 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
   cat("\nMean % Selection Loss:\n")
   print(mean_pct_sel_mat)
   cat("\nQuantiles of % Selection Loss - Lower (alpha/2):\n")
-  print(quant_pct_est_lower)
+  print(quant_pct_sel_lower)
   cat("\nQuantiles of % Selection Loss + Upper (1-alpha/2):\n")
-  print(quant_pct_est_upper)
+  print(quant_pct_sel_upper)
 
   return(list(mean_sr_loss_mat = mean_sr_loss_mat,
               quant_sr_loss_lower = quant_sr_loss_lower,
