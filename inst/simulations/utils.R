@@ -441,3 +441,108 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20", N = 20,
               quant_pct_est_lower = quant_pct_est_lower,
               quant_pct_est_upper = quant_pct_est_upper))
 }
+
+################################################################################
+
+# compute_simulation_results
+#
+# This function runs simulation experiments in parallel over a grid of parameters.
+# For each combination of 'n_obs' and 'max_card', it runs 'n_sim' simulations by
+# calling the 'simulate_sr_loss' function. The simulation results are organized into
+# a nested list keyed first by observation count and then by maximum cardinality.
+#
+# Parameters:
+#   n_obs           - A vector of observation counts to be used in the simulations.
+#   max_card        - A vector of maximum cardinality values.
+#   n_sim           - An integer specifying the number of simulations to run per parameter combination.
+#   mve_sr_sparse   - A list of precomputed sparse MVE Sharpe ratios indexed by cardinality (as characters).
+#   mu              - A numeric vector or parameter required for the simulation.
+#   sigma           - A numeric vector or parameter required for the simulation.
+#   simulate_sr_loss- A function that performs a simulation run. It should accept the parameters:
+#                     mve_sr, mu, sigma, n_obs, and max_card, and return a list containing
+#                     'sr_loss', 'sr_loss_selection', and 'sr_loss_estimation'.
+#   seed            - An integer seed for random number generation for reproducibility (default is 123).
+#   save_results    - A boolean indicating whether to save the simulation results to a file (default is TRUE).
+#   file_name       - A string specifying the file name to save the results (default is "results_portfolios_1fm_n20.rds").
+#
+# Returns:
+#   A nested list where the results are organized by observation count and maximum cardinality.
+#   The structure is: results[[as.character(n_obs)]][[as.character(max_card)]],
+#   with each element being a matrix of simulation results (n_sim x 3).
+#
+# If 'save_results' is TRUE, the results will be saved to the file path:
+# "inst/simulations/results/<file_name>".
+#
+compute_simulation_results <- function(n_obs,
+                                       max_card,
+                                       n_sim,
+                                       mve_sr_sparse,
+                                       mu,
+                                       sigma,
+                                       simulate_sr_loss,
+                                       seed = 123,
+                                       save_results = TRUE,
+                                       file_name = "results_portfolios_1fm_n20.rds") {
+  # Set the seed for reproducibility
+  set.seed(seed)
+
+  # Create the parameter grid using the supplied n_obs and max_card vectors
+  param_grid <- expand.grid(n_obs = n_obs, max_card = max_card)
+
+  # Choose number of cores to use: all but one (at least one)
+  n_cores <- max(parallel::detectCores() - 1, 1)
+
+  # Run the simulation in parallel over each parameter combination.
+  # For each parameter combination the following is done:
+  #   1. For the given n_obs and max_card, run n_sim simulations.
+  #   2. Each simulation calls simulate_sr_loss using:
+  #      - mve_sr_sparse$sr,
+  #      - mu and sigma,
+  #      - the current n_obs and max_card values.
+  #   3. Each simulation returns a vector of three elements.
+  results_grid <- parallel::mclapply(1:nrow(param_grid), function(i) {
+    n_obs_val <- param_grid$n_obs[i]
+    max_card_val <- param_grid$max_card[i]
+
+    # Run n_sim simulations and collect results.
+    sim_results <- replicate(n_sim, {
+      output <- simulate_sr_loss(
+        mve_sr = mve_sr_sparse[[as.character(max_card_val)]],
+        mu = mu,
+        sigma = sigma,
+        n_obs = n_obs_val,
+        max_card = max_card_val
+      )
+      c(sr_loss = output$sr_loss,
+        sr_loss_selection = output$sr_loss_selection,
+        sr_loss_estimation = output$sr_loss_estimation)
+    })
+
+    # transpose the simulation result matrix from 3 x n_sim to n_sim x 3.
+    sim_matrix <- t(sim_results)
+
+    # Return a list with the parameter values and simulation matrix.
+    list(n_obs = n_obs_val, max_card = max_card_val, sim_matrix = sim_matrix)
+  }, mc.cores = n_cores)
+
+  # Organize the results in a nested list keyed first by n_obs and then by max_card.
+  results <- list()
+  for (res in results_grid) {
+    n_obs_key <- as.character(res$n_obs)
+    max_card_key <- as.character(res$max_card)
+    if (is.null(results[[n_obs_key]]))
+      results[[n_obs_key]] <- list()
+    results[[n_obs_key]][[max_card_key]] <- res$sim_matrix
+  }
+
+  # Save the results to the specified file.
+  output_path <- file.path("inst", "simulations", "results", file_name)
+  # Save the results only if save_results is TRUE.
+  if (save_results) {
+    saveRDS(results, file = output_path)
+  }
+
+  # Return results invisibly (or you can simply return the results)
+  return(results)
+}
+

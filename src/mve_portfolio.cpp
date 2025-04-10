@@ -165,9 +165,8 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
         const arma::uvec sel = all_combs[i];
         // Compute the square Sharpe ratio for the selected combination.
         const arma::vec mu_sel = mu.elem(sel);
-        const arma::mat sigma_sel = sigma.submat(sel, sel);
         const double current_sr = std::sqrt(
-          arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel)) );
+          arma::dot(mu_sel, arma::solve(sigma.submat(sel, sel), mu_sel)) );
         // Update the maximum square Sharpe ratio and selection if current is better.
         if (current_sr > mve_sr) {
           mve_sr = current_sr;
@@ -190,10 +189,9 @@ Rcpp::List compute_sparse_mve_sr(const arma::vec& mu,
         // Generate a random combination of k distinct indices from 0 to n-1.
         const arma::uvec sel = random_combination(n, k);
         const arma::vec mu_sel = mu.elem(sel);
-        const arma::mat sigma_sel = sigma.submat(sel, sel);
         // Compute the square Sharpe ratio for the selected combination.
         const double current_sr = std::sqrt(
-          arma::dot(mu_sel, arma::solve(sigma_sel, mu_sel)) );
+          arma::dot(mu_sel, arma::solve( sigma.submat(sel, sel), mu_sel)) );
         // Update the maximum square Sharpe ratio and selection if current is better.
         if (current_sr > mve_sr) {
           mve_sr = current_sr;
@@ -266,10 +264,10 @@ Rcpp::List compute_sr_sparsity_loss(const double mve_sr,
                                                              false);
   // Compute the sample sparse MVE portfolio weights
   const arma::vec mve_sparse_weights_sample = compute_mve_weights(mu_sample,
-                                                           sigma_sample + mu_sample * mu_sample.t(),
-                                                           mve_sparse_sample["selection"],
-                                                           1.0,
-                                                           false);
+                                                                  sigma_sample + mu_sample * mu_sample.t(),
+                                                                  mve_sparse_sample["selection"],
+                                                                  1.0,
+                                                                  false);
   // Compute the population Sharpe ratio of the sample sparse MVE portfolio
   const double mve_sr_sparse_sample = compute_sr(mve_sparse_weights_sample,
                                                  mu,
