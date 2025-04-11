@@ -11,7 +11,8 @@ compute_mve_sr_cpp(mu, sigma, selection, do_checks = FALSE)
 
 \item{sigma}{Covariance matrix.}
 
-\item{selection}{Index vector with asset indices.}
+\item{selection}{Index vector with asset indices. Default is an empty
+vector, which means all assets are selected.}
 
 \item{do_checks}{Logical flag indicating whether to perform input checks (default = FALSE).}
 }

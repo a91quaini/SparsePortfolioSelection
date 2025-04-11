@@ -118,7 +118,7 @@ sigma <- model$sigma
 mve_sr <- compute_mve_sr(mu, sigma, 1:n_returns)
 
 # Set simulation parameters
-n_sim <- 3
+n_sim <- 1000
 # Set the various sample sizes
 n_obs <- c(10, 15, 20, 50, 100)
 # Set the various cardinality constraints
@@ -157,7 +157,7 @@ compute_simulation_results(n_obs = n_obs,
 
 ####* Evaluate the results
 evaluation <- evaluate_simulation_results(f_name = "portfolios_1fm_n20_weak05",
-                                       N = n_returns,
-                                       mve_sr = mve_sr,
-                                       mve_sr_cardk = mve_sr_cardk)
+                                          N = n_returns,
+                                          mve_sr = mve_sr,
+                                          mve_sr_cardk = mve_sr_cardk)
 

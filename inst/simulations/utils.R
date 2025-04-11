@@ -155,7 +155,15 @@ calibrate_factor_model <- function(returns, factors, weak_coeff = 0.0, idiosy_vo
 # Returns:
 #   A nested list where the results are organized by observation count and maximum cardinality.
 #   The structure is: results[[as.character(n_obs)]][[as.character(max_card)]],
-#   with each element being a matrix of simulation results (n_sim x 2).
+#   with each element being a matrix of simulation results (n_sim x 4).
+#   This matrix contains the following columns:
+#     - \code{sample_mve_sr} computed as the optimal sample mve Sharpe ratio,
+#     - \code{sample_mve_sr_cardk} computed as the optimal sample mve Sharpe ratio
+#       with cardinality \code{max_card},
+#     - \code{mve_sr_cardk_est_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+#       where \code{w} are the optimal sample mve weights,
+#     - \code{mve_sr_cardk_sel_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+#       where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio.
 #
 # If 'save_results' is TRUE, the results will be saved to the file path:
 # "inst/simulations/results/<file_name>".
@@ -201,8 +209,10 @@ compute_simulation_results <- function(n_obs,
         max_comb = max_comb,
         do_checks = FALSE
       )
-      c(mve_sr_selection_term = output$mve_sr_selection_term,
-        mve_sr_estimation_term = output$mve_sr_estimation_term)
+      c(sample_mve_sr = output$sample_mve_sr,
+        sample_mve_sr_cardk = output$sample_mve_sr_cardk,
+        mve_sr_cardk_est_term = output$mve_sr_cardk_est_term,
+        mve_sr_cardk_sel_term = output$mve_sr_cardk_sel_term)
     })
 
     # transpose the simulation result matrix from 2 x n_sim to n_sim x 2.
@@ -319,15 +329,16 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
       sim_results <- results[[as.character(T_val)]][[as.character(k_val)]]
       if (is.null(sim_results)) next
 
+      current_mve_sr_cardk <- mve_sr_cardk[[as.character(k_val)]]
       # Create a data frame from the simulation matrix.
-      # Assumes sim_results has columns "mve_sr_selection_term", "mve_sr_estimation_term"
+      # Assumes sim_results has columns "mve_sr_cardk_est_term", "mve_sr_cardk_est_term"
       df <- as.data.frame(sim_results)
 
       # Compute the Sharpe ratio loss
-      df$sr_loss <- with(df, mve_sr_cardk[[as.character(k_val)]] - sim_results[, "mve_sr_estimation_term"])
+      df$sr_loss <- with(df, current_mve_sr_cardk - sim_results[, "mve_sr_cardk_est_term"])
 
       # Compute percentage of selection loss (if sr_loss is 0, set 0)
-      df$pct_sel <- with(df, ifelse(sr_loss != 0, (mve_sr_cardk[[as.character(k_val)]] - sim_results[, "mve_sr_selection_term"]) / df$sr_loss * 100, 0))
+      df$pct_sel <- with(df, ifelse(sr_loss != 0, (current_mve_sr_cardk - sim_results[, "mve_sr_cardk_sel_term"]) / df$sr_loss * 100, 0))
 
       # Compute quantiles for sr_loss and pct_est
       T_key <- paste0("T=", T_val)
@@ -375,30 +386,44 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
 
     }
 
-    # For each sample size T, create a summary plot comparing the Sharpe ratios across k.
+    # Define initial factor levels of interest
+    initial_types <- c("theta_*",
+                       "theta_{k,*}",
+                       "theta_{H(hat(w)_k^{card})}",
+                       "theta(w_k^card)")
+
+    # Create the initial data.frame with one row per combination of k and the 4 types
     summary_df <- data.frame(
-      k = rep(k_vals, each = 4),
-      type = factor(rep(c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)"),
-                        times = length(k_vals)),
-                    levels = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)")),
+      k = rep(k_vals, each = length(initial_types)),
+      type = factor(rep(initial_types, times = length(k_vals)),
+                    levels = initial_types),
       sharpe = NA_real_
     )
 
+    # Specify T key (if needed later to index results)
     T_key <- paste0("T=", T_val)
+
+    # Loop over each value of k to fill in the values for the initial types
     for (k_val in k_vals) {
       k_key <- paste0("k=", k_val)
       sim_results <- results[[as.character(T_val)]][[as.character(k_val)]]
+
       # a) Population full MVE Sharpe ratio (theta_*)
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_*"] <- mve_sr
-      # b) Population sparse MVE Sharpe ratio (theta_{k,*})
-      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{k,*}"] <- mve_sr_cardk[[as.character(k_val)]]
-      # c) Adjusted sample MVE Sharpe ratio (theta_{H(hat(w)_k^{card})})
+
+      # b) Population MVE Sharpe ratio with max cardinality k (theta_{k,*})
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{k,*}"] <-
+        mve_sr_cardk[[as.character(k_val)]]
+
+      # c) Population MVE Sharpe ratio with max cardinality k based on estimated index set (theta_{H(hat(w)_k^{card})})
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta_{H(hat(w)_k^{card})}"] <-
-        mean(sim_results[, "mve_sr_selection_term"], na.rm = TRUE)
-      # d) Sample MVE Sharpe ratio (theta(w_k^card))
+        mean(sim_results[, "mve_sr_cardk_est_term"], na.rm = TRUE)
+
+      # d) Population Sharpe ratio of sample MVE portfolio weights with max cardinality k (theta(w_k^card))
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta(w_k^card)"] <-
-        mean(sim_results[, "mve_sr_estimation_term"], na.rm = TRUE)
+        mean(sim_results[, "mve_sr_cardk_est_term"], na.rm = TRUE)
     }
+
 
     p_summary <- ggplot2::ggplot(summary_df, ggplot2::aes(x = k, y = sharpe, color = type, shape = type)) +
       ggplot2::geom_line(size = 1.2) +
@@ -442,6 +467,88 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
     # Save the summary plot.
     summary_filename <- file.path(output_dir, paste0(f_name, "_t", T_val, "_summary.png"))
     ggplot2::ggsave(summary_filename, p_summary, width = 8, height = 6, dpi = 300, bg = "white")
+
+    # Define the new extra types to be added
+    new_types <- c("hat(theta)", "hat(theta)_k")
+
+    # Update factor levels to include the new types
+    all_types <- c(initial_types, new_types)
+    summary_df$type <- factor(summary_df$type, levels = all_types)
+
+    # Create an extra data.frame for the new types for each value of k
+    extra_df <- data.frame(
+      k = rep(k_vals, each = length(new_types)),
+      type = factor(rep(new_types, times = length(k_vals)), levels = all_types),
+      sharpe = NA_real_
+    )
+
+    # Append the extra rows to the original summary_df
+    summary_df <- rbind(summary_df, extra_df)
+
+    # Loop again over each k value to fill in the values for the extra types
+    for (k_val in k_vals) {
+      k_key <- paste0("k=", k_val)
+      sim_results <- results[[as.character(T_val)]][[as.character(k_val)]]
+
+      # e) Sample MVE Sharpe ratio (hat(theta))
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "hat(theta)"] <-
+        mean(sim_results[, "sample_mve_sr"], na.rm = TRUE)
+
+      # f) Sample MVE Sharpe ratio with max cardinality k (hat(theta)_k)
+      summary_df$sharpe[summary_df$k == k_val & summary_df$type == "hat(theta)_k"] <-
+        mean(sim_results[, "sample_mve_sr_cardk"], na.rm = TRUE)
+    }
+
+    q_summary <- ggplot2::ggplot(summary_df, ggplot2::aes(x = k, y = sharpe, color = type, shape = type)) +
+      ggplot2::geom_line(size = 1.2) +
+      ggplot2::geom_point(size = 3) +
+      ggplot2::labs(title = paste("Sharpe Ratios for N =", N, ", T =", T_val),
+                    x = "Cardinality (k)", y = "Sharpe Ratio") +
+      ggplot2::scale_color_manual(
+        name = "Type",
+        values = c("theta_*" = "black",
+                   "theta_{k,*}" = "blue",
+                   "theta_{H(hat(w)_k^{card})}" = "darkgreen",
+                   "theta(w_k^card)" = "red",
+                   "hat(theta)" = "gray",
+                   "hat(theta)_k" = "darkgray"),
+        breaks = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)", "hat(theta)", "hat(theta)_k"),
+        labels = c(expression(theta["*"]),
+                   bquote(theta[italic(k) * "," * "*" ]),
+                   expression(theta[H(hat(w)[k]^"card")]),
+                   expression(theta(hat(w)[k]^"card")),
+                   expression(hat(theta)),
+                   expression(hat(theta)[k]))
+      ) +
+      ggplot2::scale_shape_manual(
+        name = "Type",
+        values = c("theta_*" = 16,
+                   "theta_{k,*}" = 17,
+                   "theta_{H(hat(w)_k^{card})}" = 18,
+                   "theta(w_k^card)" = 15,
+                   "hat(theta)" = 13,
+                   "hat(theta)_k" = 12),
+        breaks = c("theta_*", "theta_{k,*}", "theta_{H(hat(w)_k^{card})}", "theta(w_k^card)", "hat(theta)", "hat(theta)_k"),
+        labels = c(expression(theta["*"]),
+                   bquote(theta[italic(k) * "," * "*" ]),
+                   expression(theta[H(hat(w)[k]^"card")]),
+                   expression(theta(hat(w)[k]^"card")),
+                   expression(hat(theta)),
+                   expression(hat(theta)[k]))
+      ) +
+      ggplot2::guides(color = ggplot2::guide_legend(), shape = ggplot2::guide_legend()) +
+      ggplot2::theme_minimal(base_size = 14) +
+      ggplot2::theme(axis.text = ggplot2::element_text(size = 14),
+                     axis.title = ggplot2::element_text(size = 16),
+                     plot.title = ggplot2::element_text(size = 18, face = "bold"),
+                     legend.title = ggplot2::element_text(size = 18),
+                     legend.text = ggplot2::element_text(size = 18))
+
+    print(q_summary)
+
+    # Save the summary plot.
+    summary_filename <- file.path(output_dir, paste0(f_name, "_t", T_val, "_summary_full.png"))
+    ggplot2::ggsave(summary_filename, q_summary, width = 8, height = 6, dpi = 300, bg = "white")
   }
 
   # Display the summary matrices.

@@ -36,7 +36,7 @@ double compute_sr_cpp(const arma::vec& weights,
   }
 
   // Compute the Sharpe ratio: (w^T mu) / sqrt(w^T sigma w)
-  return arma::dot(weights, mu) / std::sqrt(arma::dot(weights, sigma * weights));
+  return arma::dot(weights, mu) / std::sqrt( arma::dot(weights, sigma * weights) );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,12 +64,15 @@ double compute_mve_sr_cpp(const arma::vec& mu,
 
   // If selection is not supplied or is full, use full mu and sigma.
   if (selection.n_elem == 0 || selection.n_elem == mu.n_elem) {
-    return std::sqrt( arma::dot(mu, arma::solve(sigma, mu)) );
+    //return std::sqrt( arma::dot(mu, arma::solve(sigma, mu)) );
+    return std::sqrt( arma::dot(mu, solve_sympd(sigma, mu)) );
   }
 
   // Otherwise, subset the inputs according to the asset selection.
   const arma::vec mu_sel = mu.elem(selection);
-  return std::sqrt( arma::dot(mu_sel, arma::solve(
+  // return std::sqrt( arma::dot(mu_sel, arma::solve(
+  //     sigma.submat(selection, selection), mu_sel)) );
+  return std::sqrt( arma::dot(mu_sel, solve_sympd(
       sigma.submat(selection, selection), mu_sel)) );
 }
 
@@ -100,15 +103,18 @@ arma::vec compute_mve_weights_cpp(const arma::vec& mu,
 
   // If the selection vector has the same length as mu, or if it is not supplied,
   // return the full-sample solution.
-  if (selection.n_elem == mu.n_elem || selection.n_elem == 0) {
-    return (1.0 / gamma) * arma::solve(second_moment, mu);
+  if (selection.n_elem == 0 || selection.n_elem == mu.n_elem) {
+    // return (1.0 / gamma) * arma::solve(second_moment, mu);
+    return (1.0 / gamma) * solve_sympd(second_moment, mu);
   }
 
   // Initialize full weight vector (length = N) with zeros.
   arma::vec full_weights(mu.n_elem, arma::fill::zeros);
 
   // Place the computed weights in the positions corresponding to the selected assets.
-  full_weights.elem(selection) = (1.0 / gamma) * arma::solve(
+  // full_weights.elem(selection) = (1.0 / gamma) * arma::solve(
+  //   second_moment.submat(selection, selection), mu.elem(selection));
+  full_weights.elem(selection) = (1.0 / gamma) * solve_sympd(
     second_moment.submat(selection, selection), mu.elem(selection));
 
   return full_weights;
@@ -160,15 +166,13 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
       // For each combination, compute the Sharpe ratio.
       for (size_t i = 0; i < all_combs.size(); i++) {
         // Select the current combination.
-        const arma::uvec sel = all_combs[i];
+        const arma::uvec selection = all_combs[i];
         // Compute the Sharpe ratio for the selected combination.
-        const arma::vec mu_sel = mu.elem(sel);
-        const double current_sr = std::sqrt(
-          arma::dot(mu_sel, arma::solve(sigma.submat(sel, sel), mu_sel)) );
+        const double current_sr = compute_mve_sr_cpp(mu, sigma, selection, false);
         // Update the maximum Sharpe ratio and selection if current is better.
         if (current_sr > mve_sr) {
           mve_sr = current_sr;
-          mve_selection = sel;
+          mve_selection = selection;
         }
       }
     }
@@ -182,15 +186,12 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
       for (unsigned int i = 0; i < max_comb; i++) {
         // Generate a random combination of k distinct indices from 0 to n-1.
         const arma::uvec shuffled_indices = arma::shuffle(indices);
-        const arma::uvec sel_k = shuffled_indices.head(k);
-        const arma::vec mu_sel = mu.elem(sel_k);
-        // Compute the Sharpe ratio for the selected combination.
-        const double current_sr = std::sqrt(
-          arma::dot(mu_sel, arma::solve( sigma.submat(sel_k, sel_k), mu_sel)) );
+        const arma::uvec selection_k = shuffled_indices.head(k);
+        const double current_sr = compute_mve_sr_cpp(mu, sigma, selection_k, false);
         // Update the maximum Sharpe ratio and selection if current is better.
         if (current_sr > mve_sr) {
           mve_sr = current_sr;
-          mve_selection = sel_k;
+          mve_selection = selection_k;
         }
       }
     }
@@ -245,6 +246,12 @@ Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
     }
   }
 
+  // Compute the sample MVE Sharpe ratio
+  const double sample_mve = compute_mve_sr_cpp(mu_sample,
+                                               sigma_sample,
+                                               arma::uvec(),
+                                               false);
+
   // Compute the sample MVE Sharpe ratio with max cardinality k
   const Rcpp::List sample_mve_cardk = compute_mve_sr_cardk_cpp(mu_sample,
                                                                sigma_sample,
@@ -252,26 +259,29 @@ Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
                                                                max_comb,
                                                                false);
   // Compute the sample MVE portfolio weights with max cardinality k
-  const arma::vec sample_mve_weights = compute_mve_weights_cpp(mu_sample,
-                                                               sigma_sample + mu_sample * mu_sample.t(),
-                                                               sample_mve_cardk["selection"],
-                                                               1.0,
-                                                               false);
+  const arma::vec sample_mve_weights_cardk = compute_mve_weights_cpp(mu_sample,
+                                                                     sigma_sample + mu_sample * mu_sample.t(),
+                                                                     sample_mve_cardk["selection"],
+                                                                     1.0,
+                                                                     false);
+
   // 1. Compute the population MVE Sharpe ratio estimation term
-  const double mve_sr_estimation_term = compute_sr_cpp(sample_mve_weights,
-                                                       mu,
-                                                       sigma,
-                                                       false);
+  const double mve_sr_cardk_est_term = compute_sr_cpp(sample_mve_weights_cardk,
+                                                      mu,
+                                                      sigma,
+                                                      false);
 
   // 2. Compute the population MVE Sharpe ratio selection term
-  const double mve_sr_selection_term = compute_mve_sr_cpp(mu,
+  const double mve_sr_cardk_sel_term = compute_mve_sr_cpp(mu,
                                                           sigma,
                                                           sample_mve_cardk["selection"],
                                                           false);
 
   // Compute the Sharpe ratio loss
-  return Rcpp::List ::create(Rcpp::Named("mve_sr_estimation_term") = mve_sr_estimation_term,
-                             Rcpp::Named("mve_sr_selection_term") = mve_sr_selection_term);
+  return Rcpp::List ::create(Rcpp::Named("sample_mve_sr") = sample_mve,
+                             Rcpp::Named("sample_mve_sr_cardk") = sample_mve_cardk["sr"],
+                             Rcpp::Named("mve_sr_cardk_est_term") = mve_sr_cardk_est_term,
+                             Rcpp::Named("mve_sr_cardk_sel_term") = mve_sr_cardk_sel_term);
 
 }
 

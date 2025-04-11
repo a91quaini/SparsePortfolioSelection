@@ -75,8 +75,11 @@ load_data <- function(type = "p", do_checks = TRUE) {
 #' This function simulates a sample of size \code{n_obs} from a multivariate normal
 #' distribution with mean vector \code{mu} and covariance matrix \code{sigma}.
 #' It computes the sample mean vector (\code{mu_sample}) and the sample covariance matrix (\code{sigma_sample}),
-#' then calls \code{compute_sr_sparsity_loss} with the population and sample parameters,
-#' the maximum cardinality (\code{max_card}), and the maximum number of combinations (\code{max_comb}).
+#' then with the population and sample parameters,
+#' the maximum cardinality (\code{max_card}), and the maximum number of combinations (\code{max_comb}),
+#' it computes: the sample MVE Sharpe ratio, the sample MVE Sharpe ratio with
+#' maximum cardinality k, and the population MVE Sharpe ratio with maximum
+#' cardinality k decomposed in estimation and selection component.
 #'
 #' @param mu A numeric vector; the population mean vector.
 #' @param sigma A numeric matrix; the population covariance matrix.
@@ -86,10 +89,14 @@ load_data <- function(type = "p", do_checks = TRUE) {
 #'                 all combinations are computed.
 #' @param do_checks Logical; if TRUE, input checks are performed.
 #'
-#' @return A list with \code{mve_sr_selection_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
-#' where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio,
-#' and \code{mve_sr_estimation_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
-#' where \code{w} are the optimal sample mve weights.
+#' @return A list with:
+#'    - \code{sample_mve_sr} computed as the optimal sample mve Sharpe ratio,
+#'    - \code{sample_mve_sr_cardk} computed as the optimal sample mve Sharpe ratio
+#'      with cardinality \code{max_card},
+#'    - \code{mve_sr_cardk_est_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+#'      where \code{w} are the optimal sample mve weights,
+#'    - \code{mve_sr_cardk_sel_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+#'      where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio.
 #' @examples
 #' \dontrun{
 #' # Example with three assets:

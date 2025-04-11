@@ -43,7 +43,7 @@ mve_sr <- compute_mve_sr(mu, sigma, 1:n_returns)
 # Set simulation parameters
 n_sim <- 1000
 # Set the various sample sizes
-n_obs <- c(10, 15, 20, 50, 100)
+n_obs <- c(15, 20, 1000)
 # Set the various cardinality constraints
 max_card <- c(5, 10, 15)
 

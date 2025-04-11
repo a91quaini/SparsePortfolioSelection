@@ -17,7 +17,8 @@ compute_mve_weights_cpp(
 
 \item{second_moment}{Second moment matrix.}
 
-\item{selection}{Unsigned integer vector with asset indices.}
+\item{selection}{Unsigned integer vector with asset indices. Default is an empty
+vector, which means all assets are selected.}
 
 \item{gamma}{Risk aversion parameter. Default is 1.}
 

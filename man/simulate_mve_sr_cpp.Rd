@@ -28,10 +28,16 @@ all combinations are computed.}
 \item{do_checks}{Logical; if TRUE, input checks are performed.}
 }
 \value{
-A list with \code{mve_sr_selection_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
-where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio,
-and \code{mve_sr_estimation_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
-where \code{w} are the optimal sample mve weights.
+// @return A list with:
+\itemize{
+\item \code{sample_mve_sr} computed as the optimal sample mve Sharpe ratio,
+\item \code{sample_mve_sr_cardk} computed as the optimal sample mve Sharpe ratio
+with cardinality \code{max_card},
+\item \code{mve_sr_cardk_est_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+where \code{w} are the optimal sample mve weights,
+\item \code{mve_sr_cardk_sel_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio.
+}
 }
 \description{
 This function simulates a sample of size \code{n_obs} from a multivariate normal

@@ -27,7 +27,8 @@ compute_sr_cpp <- function(weights, mu, sigma, do_checks = FALSE) {
 #'
 #' @param mu Mean vector.
 #' @param sigma Covariance matrix.
-#' @param selection Index vector with asset indices.
+#' @param selection Index vector with asset indices. Default is an empty
+#'        vector, which means all assets are selected.
 #' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 #' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 compute_mve_sr_cpp <- function(mu, sigma, selection, do_checks = FALSE) {
@@ -45,7 +46,8 @@ compute_mve_sr_cpp <- function(mu, sigma, selection, do_checks = FALSE) {
 #'
 #' @param mu First moment vector.
 #' @param second_moment Second moment matrix.
-#' @param selection Unsigned integer vector with asset indices.
+#' @param selection Unsigned integer vector with asset indices. Default is an empty
+#'        vector, which means all assets are selected.
 #' @param gamma Risk aversion parameter. Default is 1.
 #' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 #' @return An N-length vector of mean variance efficient weights.
@@ -90,10 +92,14 @@ compute_mve_sr_cardk_cpp <- function(mu, sigma, max_card, max_comb = 0L, do_chec
 #'                 all combinations are computed.
 #' @param do_checks Logical; if TRUE, input checks are performed.
 #'
-#' @return A list with \code{mve_sr_selection_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
-#' where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio,
-#' and \code{mve_sr_estimation_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
-#' where \code{w} are the optimal sample mve weights.
+#' @return // @return A list with:
+#'    - \code{sample_mve_sr} computed as the optimal sample mve Sharpe ratio,
+#'    - \code{sample_mve_sr_cardk} computed as the optimal sample mve Sharpe ratio
+#'      with cardinality \code{max_card},
+#'    - \code{mve_sr_cardk_est_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+#'      where \code{w} are the optimal sample mve weights,
+#'    - \code{mve_sr_cardk_sel_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+#'      where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio.
 simulate_mve_sr_cpp <- function(mu, sigma, n_obs, max_card, max_comb = 0L, do_checks = FALSE) {
     .Call(`_SparsePortfolioSelection_simulate_mve_sr_cpp`, mu, sigma, n_obs, max_card, max_comb, do_checks)
 }

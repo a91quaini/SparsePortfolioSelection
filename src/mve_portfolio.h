@@ -31,13 +31,14 @@ double compute_sr_cpp(const arma::vec& weights,
 //'
 //' @param mu Mean vector.
 //' @param sigma Covariance matrix.
-//' @param selection Index vector with asset indices.
+//' @param selection Index vector with asset indices. Default is an empty
+//'        vector, which means all assets are selected.
 //' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 //' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 // [[Rcpp::export]]
 double compute_mve_sr_cpp(const arma::vec& mu,
                           const arma::mat& sigma,
-                          const arma::uvec& selection,
+                          const arma::uvec& selection = arma::uvec(),
                           const bool do_checks = false);
 
 //' Compute Mean-Variance Efficient (MVE) Portfolio Weights
@@ -51,14 +52,15 @@ double compute_mve_sr_cpp(const arma::vec& mu,
 //'
 //' @param mu First moment vector.
 //' @param second_moment Second moment matrix.
-//' @param selection Unsigned integer vector with asset indices.
+//' @param selection Unsigned integer vector with asset indices. Default is an empty
+//'        vector, which means all assets are selected.
 //' @param gamma Risk aversion parameter. Default is 1.
 //' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 //' @return An N-length vector of mean variance efficient weights.
 // [[Rcpp::export]]
 arma::vec compute_mve_weights_cpp(const arma::vec& mu,
                                   const arma::mat& second_moment,
-                                  const arma::uvec& selection,
+                                  const arma::uvec& selection = arma::uvec(),
                                   const double gamma = 1.0,
                                   const bool do_checks = false);
 
@@ -88,8 +90,10 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
 
 // Compute the Mean-Variance Efficient Sharpe Ratio decomposition in Estimation and Selection term
 //
-// This function computes the MVE Sharpe ratio decomposition in estimation and
-// selection component taking as input the population parameters (\code{mu} and \code{sigma})
+// This function computes the sample MVE Sharpe ratio, the sample MVE Sharpe ratio
+// with maximum cardinality k, and the population MVE Sharpe ratio with maximum
+// cardinality k decomposed in estimation and selection component, taking as input
+// the population parameters (\code{mu} and \code{sigma})
 // and corresponding sample parameters (\code{mu_sample} and \code{sigma_sample}),
 // together with a maximum cardinality (\code{max_card}) and a maximum number of
 // combinations (\code{max_comb}).
@@ -102,10 +106,14 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
 // @param max_comb Maximum number of combinations to consider. If \code{0{} (default),
 //                 all combinations are computed.
 // @param do_checks Logical flag indicating whether to perform input checks (default = \code{FALSE}).
-// @return A list with \code{mve_sr_selection_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
-// where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio,
-// and \code{mve_sr_estimation_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
-// where \code{w} are the optimal sample mve weights.
+// @return A list with:
+//    - \code{sample_mve_sr} computed as the optimal sample mve Sharpe ratio,
+//    - \code{sample_mve_sr_cardk} computed as the optimal sample mve Sharpe ratio
+//      with cardinality \code{max_card},
+//    - \code{mve_sr_cardk_est_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+//      where \code{w} are the optimal sample mve weights,
+//    - \code{mve_sr_cardk_sel_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+//      where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio.
 Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
                                             const arma::mat& sigma,
                                             const arma::vec& mu_sample,
@@ -130,10 +138,14 @@ Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
 //'                 all combinations are computed.
 //' @param do_checks Logical; if TRUE, input checks are performed.
 //'
-//' @return A list with \code{mve_sr_selection_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
-//' where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio,
-//' and \code{mve_sr_estimation_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
-//' where \code{w} are the optimal sample mve weights.
+//' @return // @return A list with:
+//'    - \code{sample_mve_sr} computed as the optimal sample mve Sharpe ratio,
+//'    - \code{sample_mve_sr_cardk} computed as the optimal sample mve Sharpe ratio
+//'      with cardinality \code{max_card},
+//'    - \code{mve_sr_cardk_est_term} computed as \eqn{w^T \mu^T / \sqrt{w^T\sigma w}}
+//'      where \code{w} are the optimal sample mve weights,
+//'    - \code{mve_sr_cardk_sel_term} computed as \eqn{\mu_S^T  \sigma_S^{-1} \mu_S}
+//'      where \code{S} is the set of assets yielding the optimal sample mve Sharpe ratio.
 // [[Rcpp::export]]
 Rcpp::List simulate_mve_sr_cpp(const arma::vec& mu,
                                const arma::mat& sigma,
