@@ -104,7 +104,7 @@ arma::vec compute_mve_weights_cpp(const arma::vec& mu,
   // return the full-sample solution.
   if (selection.n_elem == 0 || selection.n_elem == mu.n_elem) {
     // return (1.0 / gamma) * arma::solve(sigma, mu);
-    return (1.0 / gamma) * solve_sympd(sigma, mu);
+    return solve_sympd(sigma, mu) / gamma;
   }
 
   // Initialize full weight vector (length = N) with zeros.
@@ -113,8 +113,9 @@ arma::vec compute_mve_weights_cpp(const arma::vec& mu,
   // Place the computed weights in the positions corresponding to the selected assets.
   // full_weights.elem(selection) = (1.0 / gamma) * arma::solve(
   //   sigma.submat(selection, selection), mu.elem(selection));
-  full_weights.elem(selection) = (1.0 / gamma) * solve_sympd(
-    sigma.submat(selection, selection), mu.elem(selection));
+  full_weights.elem(selection) = solve_sympd(
+    sigma.submat(selection, selection),
+    mu.elem(selection)) / gamma;
 
   return full_weights;
 }
@@ -252,7 +253,7 @@ Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
   }
 
   // Compute the sample MVE Sharpe ratio
-  const double sample_mve = compute_mve_sr_cpp(mu_sample,
+  const double sample_mve_sr = compute_mve_sr_cpp(mu_sample,
                                                sigma_sample,
                                                arma::uvec(),
                                                false);
@@ -278,7 +279,7 @@ Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
                                                           false);
 
   // Compute the Sharpe ratio loss
-  return Rcpp::List ::create(Rcpp::Named("sample_mve_sr") = sample_mve,
+  return Rcpp::List ::create(Rcpp::Named("sample_mve_sr") = sample_mve_sr,
                              Rcpp::Named("sample_mve_sr_cardk") = sample_mve_cardk["sr"],
                              Rcpp::Named("mve_sr_cardk_est_term") = mve_sr_cardk_est_term,
                              Rcpp::Named("mve_sr_cardk_sel_term") = mve_sr_cardk_sel_term);
