@@ -426,7 +426,7 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
 
 
     p_summary <- ggplot2::ggplot(summary_df, ggplot2::aes(x = k, y = sharpe, color = type, shape = type)) +
-      ggplot2::geom_line(size = 1.2) +
+      ggplot2::geom_line(linewidth = 1.2) +
       ggplot2::geom_point(size = 3) +
       ggplot2::labs(title = paste("Sharpe Ratios for N =", N, ", T =", T_val),
                     x = "Cardinality (k)", y = "Sharpe Ratio") +
@@ -500,7 +500,7 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
     }
 
     q_summary <- ggplot2::ggplot(summary_df, ggplot2::aes(x = k, y = sharpe, color = type, shape = type)) +
-      ggplot2::geom_line(size = 1.2) +
+      ggplot2::geom_line(linewidth = 1.2) +
       ggplot2::geom_point(size = 3) +
       ggplot2::labs(title = paste("Sharpe Ratios for N =", N, ", T =", T_val),
                     x = "Cardinality (k)", y = "Sharpe Ratio") +

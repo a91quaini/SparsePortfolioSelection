@@ -4,7 +4,7 @@
 \alias{compute_sr}
 \title{Compute Sharpe Ratio}
 \usage{
-compute_sr(weights, mu, sigma, do_checks = FALSE)
+compute_sr(weights, mu, sigma, selection = c(), do_checks = FALSE)
 }
 \arguments{
 \item{weights}{Numeric vector of portfolio weights. Must be non-empty.}
@@ -13,15 +13,19 @@ compute_sr(weights, mu, sigma, do_checks = FALSE)
 
 \item{sigma}{Numeric covariance matrix. Must be non-empty, square, and its dimensions must match the length of \code{weights}.}
 
+\item{selection}{Asset selection vector (default = full selection).}
+
 \item{do_checks}{Logical flag indicating whether to perform input checks (default = FALSE).}
 }
 \value{
 A numeric scalar representing the Sharpe ratio.
 }
 \description{
-Given a vector of portfolio weights, a vector of expected returns (mu),
-and a covariance matrix (sigma), this function computes the Sharpe ratio defined as
-\deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}.}
+Given the vector of portfolio weights, the vector of expected returns (mu),
+the covariance matrix (sigma), and the asset selection vector,
+this function computes the Sharpe ratio defined as
+\deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}}
+over the selected assets.
 }
 \details{
 When \code{do_checks} is TRUE, the wrapper performs input validation in R before calling the C++ function.

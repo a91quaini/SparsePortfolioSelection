@@ -1,14 +1,17 @@
 #' Compute Sharpe Ratio
 #'
-#' Given a vector of portfolio weights, a vector of expected returns (mu),
-#' and a covariance matrix (sigma), this function computes the Sharpe ratio defined as
-#' \deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}.}
+#' Given the vector of portfolio weights, the vector of expected returns (mu),
+#' the covariance matrix (sigma), and the asset selection vector,
+#'  this function computes the Sharpe ratio defined as
+#' \deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}}
+#' over the selected assets.
 #'
 #' When \code{do_checks} is TRUE, the wrapper performs input validation in R before calling the C++ function.
 #'
 #' @param weights Numeric vector of portfolio weights. Must be non-empty.
 #' @param mu Numeric vector of expected returns. Must be non-empty and of the same length as \code{weights}.
 #' @param sigma Numeric covariance matrix. Must be non-empty, square, and its dimensions must match the length of \code{weights}.
+#' @param selection Asset selection vector (default = full selection).
 #' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 #' @return A numeric scalar representing the Sharpe ratio.
 #' @examples
@@ -18,7 +21,7 @@
 #' sigma <- diag(2)
 #' compute_sr(weights, mu, sigma, do_checks = TRUE)
 #' @export
-compute_sr <- function(weights, mu, sigma, do_checks = FALSE) {
+compute_sr <- function(weights, mu, sigma, selection = c(), do_checks = FALSE) {
   if (do_checks) {
     # Validate weights.
     if (missing(weights) || length(weights) == 0) {
@@ -52,7 +55,21 @@ compute_sr <- function(weights, mu, sigma, do_checks = FALSE) {
     if (nrow(sigma) != length(weights)) {
       stop("The dimensions of sigma must match the length of weights")
     }
+
+    # Check selection.
+    if (missing(selection) || length(selection) == 0) {
+      # If no selection is provided, default to full selection.
+      selection <- 1:length(mu)
+    } else {
+      if (!is.numeric(selection)) {
+        stop("selection must be numeric or integer")
+      }
+      selection <- as.integer(selection)
+      if (min(selection) < 1 || max(selection) > length(mu)) {
+        stop("Asset selection indices out of bounds")
+      }
+    }
   }
 
-  .Call(`_SparsePortfolioSelection_compute_sr_cpp`, weights, mu, sigma, FALSE)
+  .Call(`_SparsePortfolioSelection_compute_sr_cpp`, weights, mu, sigma, selection, FALSE)
 }

@@ -3,23 +3,26 @@
 
 #' Compute Portfolio Sharpe Ratio
 #'
-#' Given a vector of portfolio weights, a vector of mean returns, and a covariance matrix,
-#' this function computes the Sharpe ratio defined as
-#' \deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}.}
+#' Given the mean vector \eqn{\mu}, the covariance matrix \eqn{\Sigma},
+#' and the asset selection vector, this function computes the Sharpe ratio defined as
+#' \deqn{\frac{w^T \mu}{\sqrt{w^T \Sigma w}}}
+#' over the selected assets.
 #'
 #' @param weights A numeric vector of portfolio weights.
 #' @param mu A numeric vector of expected returns.
 #' @param sigma A numeric covariance matrix.
+#' @param selection Index vector with asset indices. Default is an empty
+#'        vector, which means all assets are selected.
 #' @param do_checks Logical flag indicating whether to perform input checks (default = false).
 #' @return A double representing the Sharpe ratio.
-compute_sr_cpp <- function(weights, mu, sigma, do_checks = FALSE) {
-    .Call(`_SparsePortfolioSelection_compute_sr_cpp`, weights, mu, sigma, do_checks)
+compute_sr_cpp <- function(weights, mu, sigma, selection, do_checks = FALSE) {
+    .Call(`_SparsePortfolioSelection_compute_sr_cpp`, weights, mu, sigma, selection, do_checks)
 }
 
 #' Compute Mean-Variance Efficient Portfolio Sharpe Ratio
 #'
-#' Given a mean vector \eqn{\mu}, a covariance matrix \eqn{\Sigma},
-#' and an asset selection vector, this function computes the optimal Sharpe ratio defined as
+#' Given the mean vector \eqn{\mu}, the covariance matrix \eqn{\Sigma},
+#' and the asset selection vector, this function computes the optimal Sharpe ratio defined as
 #' \deqn{\sqrt{\mu^T \Sigma^{-1}\mu}}
 #' over the selected assets.
 #' If the provided asset selection vector has length less than N,

@@ -20,8 +20,8 @@ vector, which means all assets are selected.}
 A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 }
 \description{
-Given a mean vector \eqn{\mu}, a covariance matrix \eqn{\Sigma},
-and an asset selection vector, this function computes the optimal Sharpe ratio defined as
+Given the mean vector \eqn{\mu}, the covariance matrix \eqn{\Sigma},
+and the asset selection vector, this function computes the optimal Sharpe ratio defined as
 \deqn{\sqrt{\mu^T \Sigma^{-1}\mu}}
 over the selected assets.
 If the provided asset selection vector has length less than N,

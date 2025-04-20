@@ -12,16 +12,17 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // compute_sr_cpp
-double compute_sr_cpp(const arma::vec& weights, const arma::vec& mu, const arma::mat& sigma, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_sr_cpp(SEXP weightsSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP do_checksSEXP) {
+double compute_sr_cpp(const arma::vec& weights, const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, const bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_compute_sr_cpp(SEXP weightsSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP do_checksSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type weights(weightsSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type selection(selectionSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_sr_cpp(weights, mu, sigma, do_checks));
+    rcpp_result_gen = Rcpp::wrap(compute_sr_cpp(weights, mu, sigma, selection, do_checks));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -88,7 +89,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_SparsePortfolioSelection_compute_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_sr_cpp, 4},
+    {"_SparsePortfolioSelection_compute_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_sr_cpp, 5},
     {"_SparsePortfolioSelection_compute_mve_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cpp, 4},
     {"_SparsePortfolioSelection_compute_mve_weights_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_weights_cpp, 5},
     {"_SparsePortfolioSelection_compute_mve_sr_cardk_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cardk_cpp, 6},

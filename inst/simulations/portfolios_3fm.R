@@ -41,7 +41,7 @@ sigma <- model$sigma
 mve_sr <- compute_mve_sr(mu, sigma, 1:n_returns)
 
 # Set simulation parameters
-n_sim <- 200
+n_sim <- 100
 # Set the various sample sizes
 n_obs <- c(40, 100, 1000)
 # Set the various cardinality constraints
@@ -62,16 +62,16 @@ for (card in max_card) {
 #### the results from the file "results_portfolios_1fm_n20_weak05.rds" in the "inst/simulations/results" folder
 #### This is done below at ####*
 
-compute_simulation_results(n_obs = n_obs,
-                           n_sim = n_sim,
-                           mu = mu,
-                           sigma = sigma,
-                           max_card = max_card,
-                           max_comb = 0,
-                           simulate_mve_sr = simulate_mve_sr,
-                           seed = 123,
-                           save_results = TRUE,
-                           file_name = "results_portfolios_3fm_n20_sigma.rds")
+results <- compute_simulation_results(n_obs = n_obs,
+                                      n_sim = n_sim,
+                                      mu = mu,
+                                      sigma = sigma,
+                                      max_card = max_card,
+                                      max_comb = 0,
+                                      simulate_mve_sr = simulate_mve_sr,
+                                      seed = 124,
+                                      save_results = TRUE,
+                                      file_name = "results_portfolios_3fm_n20.rds")
 
 ################################################################################
 #### ----> End of the computation part
@@ -79,7 +79,7 @@ compute_simulation_results(n_obs = n_obs,
 
 
 ####* Evaluate the results
-evaluation <- evaluate_simulation_results(f_name = "portfolios_3fm_n20_sigma",
+evaluation <- evaluate_simulation_results(f_name = "portfolios_3fm_n20",
                                           N = n_returns,
                                           mve_sr = mve_sr,
                                           mve_sr_cardk = mve_sr_cardk)
