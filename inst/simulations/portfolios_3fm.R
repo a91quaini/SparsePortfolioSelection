@@ -41,11 +41,11 @@ sigma <- model$sigma
 mve_sr <- compute_mve_sr(mu, sigma, 1:n_returns)
 
 # Set simulation parameters
-n_sim <- 1000
+n_sim <- 200
 # Set the various sample sizes
-n_obs <- c(15, 20, 1000)
+n_obs <- c(40, 100, 1000)
 # Set the various cardinality constraints
-max_card <- c(5, 10, 15)
+max_card <- c(1, 5, 10)
 
 # Compute the population mean-variance efficient Sharpe ratio with cardinality constraints
 mve_sr_cardk <- list()
@@ -71,7 +71,7 @@ compute_simulation_results(n_obs = n_obs,
                            simulate_mve_sr = simulate_mve_sr,
                            seed = 123,
                            save_results = TRUE,
-                           file_name = "results_portfolios_3fm_n20.rds")
+                           file_name = "results_portfolios_3fm_n20_sigma.rds")
 
 ################################################################################
 #### ----> End of the computation part
@@ -79,7 +79,7 @@ compute_simulation_results(n_obs = n_obs,
 
 
 ####* Evaluate the results
-evaluation <- evaluate_simulation_results(f_name = "portfolios_3fm_n20",
+evaluation <- evaluate_simulation_results(f_name = "portfolios_3fm_n20_sigma",
                                           N = n_returns,
                                           mve_sr = mve_sr,
                                           mve_sr_cardk = mve_sr_cardk)

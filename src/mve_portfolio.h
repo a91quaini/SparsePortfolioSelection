@@ -43,15 +43,15 @@ double compute_mve_sr_cpp(const arma::vec& mu,
 
 //' Compute Mean-Variance Efficient (MVE) Portfolio Weights
 //'
-//' Given a risk-aversion parameter \eqn{\gamma}, a first moment vector, a second moment matrix,
-//' and a selection index vector, this function computes the mean variance efficient portfolio weights
-//' \deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \text{first\_moment}},
+//' Given the risk-aversion parameter \eqn{\gamma}, the first moment vector, the covariance matrix,
+//' and the selection index vector, this function computes the mean variance efficient portfolio weights
+//' \deqn{w = \frac{1}{\gamma}\, \text{sigma}^{-1}\, \text{mu}},
 //' over the selected assets.
 //' If the provided asset selection vector has length less than N,
 //' the function returns an N-length weight vector with zeros for the unselected assets.
 //'
 //' @param mu First moment vector.
-//' @param second_moment Second moment matrix.
+//' @param sigma Covariance matrix.
 //' @param selection Unsigned integer vector with asset indices. Default is an empty
 //'        vector, which means all assets are selected.
 //' @param gamma Risk aversion parameter. Default is 1.
@@ -59,7 +59,7 @@ double compute_mve_sr_cpp(const arma::vec& mu,
 //' @return An N-length vector of mean variance efficient weights.
 // [[Rcpp::export]]
 arma::vec compute_mve_weights_cpp(const arma::vec& mu,
-                                  const arma::mat& second_moment,
+                                  const arma::mat& sigma,
                                   const arma::uvec& selection = arma::uvec(),
                                   const double gamma = 1.0,
                                   const bool do_checks = false);

@@ -4,18 +4,12 @@
 \alias{compute_mve_weights_cpp}
 \title{Compute Mean-Variance Efficient (MVE) Portfolio Weights}
 \usage{
-compute_mve_weights_cpp(
-  mu,
-  second_moment,
-  selection,
-  gamma = 1,
-  do_checks = FALSE
-)
+compute_mve_weights_cpp(mu, sigma, selection, gamma = 1, do_checks = FALSE)
 }
 \arguments{
 \item{mu}{First moment vector.}
 
-\item{second_moment}{Second moment matrix.}
+\item{sigma}{Covariance matrix.}
 
 \item{selection}{Unsigned integer vector with asset indices. Default is an empty
 vector, which means all assets are selected.}
@@ -28,9 +22,9 @@ vector, which means all assets are selected.}
 An N-length vector of mean variance efficient weights.
 }
 \description{
-Given a risk-aversion parameter \eqn{\gamma}, a first moment vector, a second moment matrix,
-and a selection index vector, this function computes the mean variance efficient portfolio weights
-\deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \text{first\_moment}},
+Given the risk-aversion parameter \eqn{\gamma}, the first moment vector, the covariance matrix,
+and the selection index vector, this function computes the mean variance efficient portfolio weights
+\deqn{w = \frac{1}{\gamma}\, \text{sigma}^{-1}\, \text{mu}},
 over the selected assets.
 If the provided asset selection vector has length less than N,
 the function returns an N-length weight vector with zeros for the unselected assets.

@@ -37,22 +37,22 @@ compute_mve_sr_cpp <- function(mu, sigma, selection, do_checks = FALSE) {
 
 #' Compute Mean-Variance Efficient (MVE) Portfolio Weights
 #'
-#' Given a risk-aversion parameter \eqn{\gamma}, a first moment vector, a second moment matrix,
-#' and a selection index vector, this function computes the mean variance efficient portfolio weights
-#' \deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \text{first\_moment}},
+#' Given the risk-aversion parameter \eqn{\gamma}, the first moment vector, the covariance matrix,
+#' and the selection index vector, this function computes the mean variance efficient portfolio weights
+#' \deqn{w = \frac{1}{\gamma}\, \text{sigma}^{-1}\, \text{mu}},
 #' over the selected assets.
 #' If the provided asset selection vector has length less than N,
 #' the function returns an N-length weight vector with zeros for the unselected assets.
 #'
 #' @param mu First moment vector.
-#' @param second_moment Second moment matrix.
+#' @param sigma Covariance matrix.
 #' @param selection Unsigned integer vector with asset indices. Default is an empty
 #'        vector, which means all assets are selected.
 #' @param gamma Risk aversion parameter. Default is 1.
 #' @param do_checks Logical flag indicating whether to perform input checks (default = FALSE).
 #' @return An N-length vector of mean variance efficient weights.
-compute_mve_weights_cpp <- function(mu, second_moment, selection, gamma = 1.0, do_checks = FALSE) {
-    .Call(`_SparsePortfolioSelection_compute_mve_weights_cpp`, mu, second_moment, selection, gamma, do_checks)
+compute_mve_weights_cpp <- function(mu, sigma, selection, gamma = 1.0, do_checks = FALSE) {
+    .Call(`_SparsePortfolioSelection_compute_mve_weights_cpp`, mu, sigma, selection, gamma, do_checks)
 }
 
 #' Compute Mean-Variance Efficient Sharpe Ratio with Cardinality K

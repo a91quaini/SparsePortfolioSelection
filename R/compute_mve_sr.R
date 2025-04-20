@@ -10,7 +10,7 @@
 #'
 #' @param mu Mean vector.
 #' @param sigma Covariance matrix.
-#' @param selection Asset selection vector (default = full ).
+#' @param selection Asset selection vector (default = full selection).
 #' @param do_checks Logical flag to perform input checks (default = FALSE).
 #' @return A scalar value corresponding to \eqn{\sqrt{\mu^T \Sigma^{-1}\mu}}.
 #' @examples
@@ -28,7 +28,7 @@
 #'                        selection = c(1, 3),
 #'                        do_checks = TRUE)
 #' @export
-compute_mve_sr <- function(mu, sigma, selection, do_checks = FALSE) {
+compute_mve_sr <- function(mu, sigma, selection = c(), do_checks = FALSE) {
 
   # Check inputs
   if (do_checks) {

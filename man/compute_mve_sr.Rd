@@ -4,14 +4,14 @@
 \alias{compute_mve_sr}
 \title{Compute Optimal Portfolio Sharpe Ratio}
 \usage{
-compute_mve_sr(mu, sigma, selection, do_checks = FALSE)
+compute_mve_sr(mu, sigma, selection = c(), do_checks = FALSE)
 }
 \arguments{
 \item{mu}{Mean vector.}
 
 \item{sigma}{Covariance matrix.}
 
-\item{selection}{Asset selection vector (default = full ).}
+\item{selection}{Asset selection vector (default = full selection).}
 
 \item{do_checks}{Logical flag to perform input checks (default = FALSE).}
 }

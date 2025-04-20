@@ -422,7 +422,6 @@ evaluate_simulation_results <- function(f_name = "portfolios_1fm_n20",
       # d) Population Sharpe ratio of sample MVE portfolio weights with max cardinality k (theta(w_k^card))
       summary_df$sharpe[summary_df$k == k_val & summary_df$type == "theta(w_k^card)"] <-
         mean(sim_results[, "mve_sr_cardk_est_term"], na.rm = TRUE)
-      print(mean(sim_results[, "mve_sr_cardk_est_term"], na.rm = TRUE))
     }
 
 

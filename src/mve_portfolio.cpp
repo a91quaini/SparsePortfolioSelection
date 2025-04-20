@@ -1,17 +1,16 @@
+#include <RcppArmadillo.h>
 #include "mve_portfolio.h"
 #include "utils.h"
-#include <RcppArmadillo.h>
-#include <cmath>
-#include <limits>
+#include <vector>
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
 ////////////////////////////////////////////////////////////////////////////////
 // Compute Portfolio Sharpe Ratio: (w^T mu) / sqrt(w^T sigma w)
 double compute_sr_cpp(const arma::vec& weights,
-                  const arma::vec& mu,
-                  const arma::mat& sigma,
-                  const bool do_checks) {
+                      const arma::vec& mu,
+                      const arma::mat& sigma,
+                      const bool do_checks) {
 
   // Optional input checks.
   if (do_checks) {
@@ -80,21 +79,21 @@ double compute_mve_sr_cpp(const arma::vec& mu,
 
 // Compute Mean-Variance Efficient Portfolio Weights
 arma::vec compute_mve_weights_cpp(const arma::vec& mu,
-                                  const arma::mat& second_moment,
+                                  const arma::mat& sigma,
                                   const arma::uvec& selection,
                                   const double gamma,
                                   const bool do_checks) {
 
   // Optional input checks.
   if (do_checks) {
-    if (mu.n_elem == 0 || second_moment.n_elem == 0) {
-      Rcpp::stop("First moment vector and second moment matrix must be supplied");
+    if (mu.n_elem == 0 || sigma.n_elem == 0) {
+      Rcpp::stop("First moment vector and covariance matrix must be supplied");
     }
-    if (second_moment.n_rows != second_moment.n_cols) {
-      Rcpp::stop("Second moment matrix must be square");
+    if (sigma.n_rows != sigma.n_cols) {
+      Rcpp::stop("Covariance matrix must be square");
     }
-    if (mu.n_elem != second_moment.n_rows) {
-      Rcpp::stop("First moment vector and second moment matrix must have conforming dimensions");
+    if (mu.n_elem != sigma.n_rows) {
+      Rcpp::stop("First moment vector and covariance matrix must have conforming dimensions");
     }
     if (selection.n_elem > 0 && arma::max(selection) > mu.n_elem + 1) {
       Rcpp::stop("Asset selection index out of bounds");
@@ -104,8 +103,8 @@ arma::vec compute_mve_weights_cpp(const arma::vec& mu,
   // If the selection vector has the same length as mu, or if it is not supplied,
   // return the full-sample solution.
   if (selection.n_elem == 0 || selection.n_elem == mu.n_elem) {
-    // return (1.0 / gamma) * arma::solve(second_moment, mu);
-    return (1.0 / gamma) * solve_sympd(second_moment, mu);
+    // return (1.0 / gamma) * arma::solve(sigma, mu);
+    return (1.0 / gamma) * solve_sympd(sigma, mu);
   }
 
   // Initialize full weight vector (length = N) with zeros.
@@ -113,9 +112,9 @@ arma::vec compute_mve_weights_cpp(const arma::vec& mu,
 
   // Place the computed weights in the positions corresponding to the selected assets.
   // full_weights.elem(selection) = (1.0 / gamma) * arma::solve(
-  //   second_moment.submat(selection, selection), mu.elem(selection));
+  //   sigma.submat(selection, selection), mu.elem(selection));
   full_weights.elem(selection) = (1.0 / gamma) * solve_sympd(
-    second_moment.submat(selection, selection), mu.elem(selection));
+    sigma.submat(selection, selection), mu.elem(selection));
 
   return full_weights;
 }
@@ -199,7 +198,7 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
   }
 
   // Compute the MVE weights using the selected assets.
-  const arma::vec mve_weights = compute_mve_weights_cpp(mu, sigma + mu * mu.t(), mve_selection, gamma, false);
+  const arma::vec mve_weights = compute_mve_weights_cpp(mu, sigma, mve_selection, gamma, false);
 
   // Return the results as a list.
   return Rcpp::List::create(Rcpp::Named("sr") = mve_sr,

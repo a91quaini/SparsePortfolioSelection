@@ -6,8 +6,8 @@ test_that("Full selection returns full combination when max_card equals number o
 
   # expected Sharpe ratio: sqrt(mu^T Sigma^{-1} mu)
   expected_sr <- sqrt(as.numeric(t(mu) %*% solve(sigma, mu)))
-  # expected weights = (1/gamma) * (Sigma + mu * mu^T)^{-1} * mu = mu / gamma
-  expected_weights <- solve(sigma + mu %*% t(mu), mu) / gamma
+  # expected weights = (1/gamma) * (Sigma)^{-1} * mu = mu / gamma
+  expected_weights <- solve(sigma, mu) / gamma
 
   result <- compute_mve_sr_cardk(
     mu         = mu,
@@ -27,11 +27,10 @@ test_that("Subset search with max_card < full set returns the best subset and we
   sigma <- diag(3)
   max_card <- 2
   gamma <- 1
-  second_moment <- sigma + mu %*% t(mu)
 
   # best subset {1,2} (0-indexed) gives sr = sqrt(0.2^2 + 0.15^2) = 0.25
   expected_sr      <- sqrt(mu[2]^2 + mu[3]^2)
-  expected_weights <- c(0, solve(second_moment[c(2,3),c(2,3)], mu[c(2,3)]) / gamma)
+  expected_weights <- c(0, solve(sigma[c(2,3),c(2,3)], mu[c(2,3)]) / gamma)
 
   result <- compute_mve_sr_cardk(
     mu         = mu,

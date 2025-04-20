@@ -4,14 +4,14 @@
 \alias{compute_mve_weights}
 \title{Compute MVE Weights}
 \usage{
-compute_mve_weights(mu, second_moment, selection, gamma = 1, do_checks = FALSE)
+compute_mve_weights(mu, sigma, selection = c(), gamma = 1, do_checks = FALSE)
 }
 \arguments{
 \item{mu}{First moment vector}
 
-\item{second_moment}{Second moment matrix}
+\item{sigma}{Covariance matrix}
 
-\item{selection}{Asset selection vector}
+\item{selection}{Asset selection vector (default = full selection)}
 
 \item{gamma}{Risk aversion parameter (default = 1)}
 
@@ -21,9 +21,9 @@ compute_mve_weights(mu, second_moment, selection, gamma = 1, do_checks = FALSE)
 A vector of portfolio weights.
 }
 \description{
-Given a risk-aversion parameter \eqn{\gamma}, a first moment vector, a second moment matrix,
-and a selection index vector, this function computes the mean variance efficient portfolio weights
-\deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \mu},
+Given the risk-aversion parameter \eqn{\gamma}, the first moment vector, the covariance matrix,
+and the selection index vector, this function computes the mean variance efficient portfolio weights
+\deqn{w = \frac{1}{\gamma}\, \text{sigma}^{-1}\, \mu},
 over the selected assets.
 If the provided asset selection vector has length less than N,
 the function returns an N-length weight vector with zeros for the unselected assets.
@@ -31,7 +31,7 @@ the function returns an N-length weight vector with zeros for the unselected ass
 \examples{
 # Full selection example:
 compute_mve_weights(mu = c(0.1, 0.2, 0.15),
-            second_moment = matrix(c(1, 0.2, 0.1,
+            sigma = matrix(c(1, 0.2, 0.1,
                                      0.2, 1, 0.3,
                                      0.1, 0.3, 1), nrow = 3),
             selection = c(1, 2, 3),
@@ -40,7 +40,7 @@ compute_mve_weights(mu = c(0.1, 0.2, 0.15),
 
 # Subset selection example:
 compute_mve_weights(mu = c(0.1, 0.2, 0.15, 0.12),
-            second_moment = diag(4),
+            sigma = diag(4),
             selection = c(1, 3),
             gamma = 1,
             do_checks = TRUE)

@@ -41,7 +41,7 @@ and computes the Sharpe ratio defined as
 \eqn{\mu^T \, \sigma^{-1}\, \mu},
 and computes the mean-variance efficient weights
 It returns the highest Sharpe ratio found along with the associated asset selection.
-\deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \text{first\_moment}},
+\deqn{w = \frac{1}{\gamma}\, \text{sigma}^{-1}\, \text{first\_moment}},
 over the selected assets.
 It returns the highest Sharpe ratio found along with the associated weights and asset selection.
 }

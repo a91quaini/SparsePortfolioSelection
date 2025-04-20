@@ -40,17 +40,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_mve_weights_cpp
-arma::vec compute_mve_weights_cpp(const arma::vec& mu, const arma::mat& second_moment, const arma::uvec& selection, const double gamma, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_mve_weights_cpp(SEXP muSEXP, SEXP second_momentSEXP, SEXP selectionSEXP, SEXP gammaSEXP, SEXP do_checksSEXP) {
+arma::vec compute_mve_weights_cpp(const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, const double gamma, const bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_compute_mve_weights_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP gammaSEXP, SEXP do_checksSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type second_moment(second_momentSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type selection(selectionSEXP);
     Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_mve_weights_cpp(mu, second_moment, selection, gamma, do_checks));
+    rcpp_result_gen = Rcpp::wrap(compute_mve_weights_cpp(mu, sigma, selection, gamma, do_checks));
     return rcpp_result_gen;
 END_RCPP
 }
