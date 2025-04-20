@@ -127,6 +127,7 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
                                     const arma::mat& sigma,
                                     const unsigned int max_card,
                                     const unsigned int max_comb,
+                                    const double gamma,
                                     const bool do_checks) {
   // Input checks.
   if (do_checks) {
@@ -197,13 +198,18 @@ Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu,
     }
   }
 
+  // Compute the MVE weights using the selected assets.
+  const arma::vec mve_weights = compute_mve_weights_cpp(mu, sigma + mu * mu.t(), mve_selection, gamma, false);
+
   // Return the results as a list.
   return Rcpp::List::create(Rcpp::Named("sr") = mve_sr,
+                            Rcpp::Named("weights") = mve_weights,
                             Rcpp::Named("selection") = mve_selection);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Compute MVE Sharpe Ratio Decomposition
 Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
                                             const arma::mat& sigma,
                                             const arma::vec& mu_sample,
@@ -257,16 +263,11 @@ Rcpp::List compute_mve_sr_decomposition_cpp(const arma::vec& mu,
                                                                sigma_sample,
                                                                max_card,
                                                                max_comb,
+                                                               1.0,
                                                                false);
-  // Compute the sample MVE portfolio weights with max cardinality k
-  const arma::vec sample_mve_weights_cardk = compute_mve_weights_cpp(mu_sample,
-                                                                     sigma_sample + mu_sample * mu_sample.t(),
-                                                                     sample_mve_cardk["selection"],
-                                                                     1.0,
-                                                                     false);
 
   // 1. Compute the population MVE Sharpe ratio estimation term
-  const double mve_sr_cardk_est_term = compute_sr_cpp(sample_mve_weights_cardk,
+  const double mve_sr_cardk_est_term = compute_sr_cpp(sample_mve_cardk["weights"],
                                                       mu,
                                                       sigma,
                                                       false);

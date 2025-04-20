@@ -55,8 +55,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_mve_sr_cardk_cpp
-Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu, const arma::mat& sigma, const unsigned int max_card, const unsigned int max_comb, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_mve_sr_cardk_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP max_cardSEXP, SEXP max_combSEXP, SEXP do_checksSEXP) {
+Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu, const arma::mat& sigma, const unsigned int max_card, const unsigned int max_comb, const double gamma, const bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_compute_mve_sr_cardk_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP max_cardSEXP, SEXP max_combSEXP, SEXP gammaSEXP, SEXP do_checksSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -64,8 +64,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< const unsigned int >::type max_card(max_cardSEXP);
     Rcpp::traits::input_parameter< const unsigned int >::type max_comb(max_combSEXP);
+    Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_mve_sr_cardk_cpp(mu, sigma, max_card, max_comb, do_checks));
+    rcpp_result_gen = Rcpp::wrap(compute_mve_sr_cardk_cpp(mu, sigma, max_card, max_comb, gamma, do_checks));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -90,7 +91,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_SparsePortfolioSelection_compute_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_sr_cpp, 4},
     {"_SparsePortfolioSelection_compute_mve_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cpp, 4},
     {"_SparsePortfolioSelection_compute_mve_weights_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_weights_cpp, 5},
-    {"_SparsePortfolioSelection_compute_mve_sr_cardk_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cardk_cpp, 5},
+    {"_SparsePortfolioSelection_compute_mve_sr_cardk_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cardk_cpp, 6},
     {"_SparsePortfolioSelection_simulate_mve_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_simulate_mve_sr_cpp, 6},
     {NULL, NULL, 0}
 };

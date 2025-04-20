@@ -4,7 +4,14 @@
 \alias{compute_mve_sr_cardk_cpp}
 \title{Compute Mean-Variance Efficient Sharpe Ratio with Cardinality K}
 \usage{
-compute_mve_sr_cardk_cpp(mu, sigma, max_card, max_comb = 0L, do_checks = FALSE)
+compute_mve_sr_cardk_cpp(
+  mu,
+  sigma,
+  max_card,
+  max_comb = 0L,
+  gamma = 1,
+  do_checks = FALSE
+)
 }
 \arguments{
 \item{mu}{Mean vector.}
@@ -16,17 +23,24 @@ compute_mve_sr_cardk_cpp(mu, sigma, max_card, max_comb = 0L, do_checks = FALSE)
 \item{max_comb}{Maximum number of combinations to consider. If 0 (default),
 all combinations are computed.}
 
+\item{gamma}{Risk aversion parameter. Default is 1.}
+
 \item{do_checks}{Logical flag indicating whether to perform input checks (default = \code{FALSE}).}
 }
 \value{
-A list with \code{sr} (the optimal Sharpe ratio) and \code{selection} (the asset indices of the optimal selection).
+A list with \code{sr} (the optimal Sharpe ratio), \code{mve_weights}
+(the optimal weights) and \code{selection} (the optimal asset selection).
 }
 \description{
 This function takes as inputs the mean vector \code{mu}, the covariance matrix \code{sigma},
 the maximum active portfolio cardinality \code{max_card},
-and the maximum number of combinations per cardinality to evaluate \code{max_comb}.
+the maximum number of combinations per cardinality to evaluate \code{max_comb},
+and the risk-aversion parameter \eqn{\gamma}.
 With these inputs, it searches over all combinations of assets with cardinality from 1 up to \code{max_card}
 and computes the Sharpe ratio defined as
-\eqn{\mu^T \, \sigma^{-1}\, \mu}.
-It returns the highest Sharpe ratio found along with the associated asset selection.
+\eqn{\mu^T \, \sigma^{-1}\, \mu},
+and computes the mean-variance efficient weights
+\deqn{w = \frac{1}{\gamma}\, \text{second\_moment}^{-1}\, \text{first\_moment}},
+over the selected assets.
+It returns the highest Sharpe ratio found along with the associated weights and asset selection.
 }
