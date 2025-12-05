@@ -17,9 +17,9 @@ W_IN <- 252             # in-sample length (days)
 W_OUT <- 30             # OOS block length (non-overlapping)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
-K_STEP <- 5
+K_STEP <- 3
 K_CAP <- N_ASSETS - 1
-METHOD <- "miqp"    # "lasso" | "elnet" | "miqp"
+METHOD <- "lasso"    # "lasso" | "elnet" | "miqp"
 METHOD_LABEL <- METHOD
 METHOD_STEM <- METHOD
 
@@ -72,7 +72,7 @@ miqp_params <- list(
   threads = 0,
   compute_weights = TRUE,
   normalize_weights = FALSE,
-  use_refit = TRUE,
+  use_refit = FALSE,
   verbose = FALSE,
   stabilize_sigma = TRUE
 )
