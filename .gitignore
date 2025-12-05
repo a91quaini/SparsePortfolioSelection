@@ -62,9 +62,6 @@ coverage/
 # roxygen2 “junk” or partial files, if any
 .Rbuildignore
 
-# Simulation artifacts
-inst/simulations/results/
-
 # Data: keep package-ready data/, ignore large raw inputs in data-raw (but keep .csv)
 data-raw/**/*.tsv
 data-raw/**/*.txt
