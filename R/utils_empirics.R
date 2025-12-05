@@ -179,6 +179,114 @@ run_oos_evaluation <- function(R,
   )
 }
 
+#' Parallel OOS evaluation over rolling/expanding windows
+#'
+#' Same as `run_oos_evaluation` but parallelizes over windows using
+#' `parallel::mclapply` (best on Unix-like systems).
+#'
+#' @inheritParams run_oos_evaluation
+#' @param n_cores Number of cores to use; defaults to `max(1, detectCores() - 1)`.
+#' @return Same as `run_oos_evaluation`.
+#' @export
+run_oos_evaluation_parallel <- function(R,
+                                        size_w_in,
+                                        size_w_out,
+                                        k_grid,
+                                        oos_type = c("rolling", "expanding"),
+                                        compute_weights_fn,
+                                        compute_weights_fn_params = list(),
+                                        n_cores = NULL,
+                                        return_details = FALSE) {
+  oos_type <- match.arg(oos_type)
+  R <- as.matrix(R)
+  Tobs <- nrow(R); N <- ncol(R)
+  if (Tobs < 2) stop("R must have at least 2 rows.")
+  windows <- .build_windows(Tobs, size_w_in, size_w_out, oos_type)
+  W <- length(windows); K <- length(k_grid)
+
+  if (is.null(n_cores)) {
+    n_cores <- max(1L, parallel::detectCores(logical = TRUE) - 1L)
+  } else {
+    n_cores <- max(1L, as.integer(n_cores))
+  }
+
+  worker <- function(w_idx) {
+    idx_in <- windows[[w_idx]]$idx_in
+    idx_out <- windows[[w_idx]]$idx_out
+    Rin <- R[idx_in, , drop = FALSE]
+    Rout <- R[idx_out, , drop = FALSE]
+
+    oos_list <- vector("list", K)
+    counts <- integer(K)
+    status_vec <- character(K)
+
+    for (ik in seq_along(k_grid)) {
+      k <- k_grid[ik]
+      res <- do.call(compute_weights_fn, c(list(Rin, k), compute_weights_fn_params))
+      if (is.null(res$weights)) stop("compute_weights_fn must return a `weights` element.")
+      wopt <- as.numeric(res$weights)
+      sel_raw <- res$selection
+      sel_idx <- if (is.null(sel_raw)) integer() else {
+        if (is.logical(sel_raw)) which(sel_raw) else as.integer(sel_raw)
+      }
+      status_vec[ik] <- if (!is.null(res$status)) tolower(as.character(res$status)) else "unknown"
+
+      rp <- if (length(sel_idx) == 0) {
+        drop(Rout %*% wopt)
+      } else {
+        drop(Rout[, sel_idx, drop = FALSE] %*% wopt[sel_idx])
+      }
+      if (length(rp) > 0) {
+        rp <- rp[is.finite(rp)]
+        if (length(rp) > 0) {
+          oos_list[[ik]] <- rp
+          counts[ik] <- length(rp)
+        } else {
+          oos_list[[ik]] <- numeric(0)
+        }
+      } else {
+        oos_list[[ik]] <- numeric(0)
+      }
+    }
+    list(oos = oos_list, counts = counts, status = status_vec)
+  }
+
+  res_list <- parallel::mclapply(seq_len(W), worker, mc.cores = n_cores)
+
+  oos_concat <- vector("list", K)
+  for (ik in seq_len(K)) oos_concat[[ik]] <- numeric(0)
+  counts_obs <- integer(K)
+  status_mat <- matrix("unknown", nrow = W, ncol = K)
+
+  for (w in seq_len(W)) {
+    res <- res_list[[w]]
+    for (ik in seq_len(K)) {
+      oos_concat[[ik]] <- c(oos_concat[[ik]], res$oos[[ik]])
+      counts_obs[ik] <- counts_obs[ik] + res$counts[ik]
+      status_mat[w, ik] <- res$status[ik]
+    }
+  }
+
+  oos_by_k <- numeric(K)
+  for (ik in seq_len(K)) {
+    r <- oos_concat[[ik]]
+    if (length(r) >= 2) {
+      s <- stats::sd(r)
+      oos_by_k[ik] <- if (is.finite(s) && s > 0) mean(r) / s else NA_real_
+    } else {
+      oos_by_k[ik] <- NA_real_
+    }
+  }
+
+  if (!return_details) return(oos_by_k)
+  list(
+    oos_by_k = oos_by_k,
+    counts = counts_obs,
+    status_mat = status_mat,
+    oos_returns = oos_concat
+  )
+}
+
 #' Fast covariance helper
 #'
 #' Lightweight covariance helper without importing stats

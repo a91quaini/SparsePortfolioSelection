@@ -19,7 +19,7 @@ OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
 K_STEP <- 5
 K_CAP <- N_ASSETS - 1
-METHOD <- "lasso"    # "lasso" | "elnet" | "miqp"
+METHOD <- "miqp"    # "lasso" | "elnet" | "miqp"
 METHOD_LABEL <- METHOD
 METHOD_STEM <- METHOD
 
@@ -95,16 +95,33 @@ compute_weights_fn <- if (METHOD == "miqp") {
 
 message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
-sr_vec <- run_oos_evaluation(
-  R = R,
-  size_w_in = W_IN,
-  size_w_out = W_OUT,
-  k_grid = k_grid,
-  oos_type = OOS_TYPE,
-  compute_weights_fn = compute_weights_fn,
-  compute_weights_fn_params = list(),
-  return_details = FALSE
-)
+# Optional parallel run: set PARALLEL <- TRUE to enable
+PARALLEL <- TRUE
+if (PARALLEL) {
+  n_cores <- max(1L, parallel::detectCores(logical = TRUE) - 1L)
+  sr_vec <- run_oos_evaluation_parallel(
+    R = R,
+    size_w_in = W_IN,
+    size_w_out = W_OUT,
+    k_grid = k_grid,
+    oos_type = OOS_TYPE,
+    compute_weights_fn = compute_weights_fn,
+    compute_weights_fn_params = list(),
+    n_cores = n_cores,
+    return_details = FALSE
+  )
+} else {
+  sr_vec <- run_oos_evaluation(
+    R = R,
+    size_w_in = W_IN,
+    size_w_out = W_OUT,
+    k_grid = k_grid,
+    oos_type = OOS_TYPE,
+    compute_weights_fn = compute_weights_fn,
+    compute_weights_fn_params = list(),
+    return_details = FALSE
+  )
+}
 
 SR <- matrix(sr_vec, ncol = 1)
 labels <- METHOD_LABEL
