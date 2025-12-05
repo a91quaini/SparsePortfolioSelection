@@ -10,16 +10,17 @@ Description: Replication codes for the paper ``Risk Reduction via Sparse Portfol
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 LinkingTo: 
     Rcpp,
     RcppArmadillo
 Imports: 
     Rcpp,
+    glmnet
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-SystemRequirements: C++11
+SystemRequirements: C++11, Gurobi Optimizer (>= 12.0) with GUROBI_HOME set
 Depends: 
     R (>= 3.5)
 LazyData: true

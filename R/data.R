@@ -1,220 +1,136 @@
-#' Risk-free return.
+#' FF5 daily factors (with RF)
 #'
-#' Monthly risk-free return from the Fama–French datasets,
-#' covering the period from 05/2008 to 12/2022.
+#' Daily Fama–French 5 factors including RF (decimals). Not exported; used internally.
 #'
-#' @format A matrix with \code{T} rows and 2 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{RF}{Risk-free rate.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Factor columns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"rf"
+factors_ff5_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and book‐to‐market.
+#' Daily risk-free rates (internal)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and book‐to‐market,
-#' covering the period from 05/2008 to 12/2022.
+#' DATE and RF (decimals) aligned to the factors. Not exported.
 #'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{RF}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_mebeme25"
+rf_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and operating profitability.
+#' Daily excess returns: 49 industry portfolios (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and operating profitability,
-#' covering the period from 05/2008 to 12/2022.
+#' DATE plus excess returns (decimals) for 49 industry portfolios.
 #'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_opinv25"
+returns_ind49_daily <- NULL
 
-#' Excess returns on portfolios sorted on book‐to‐market and investment.
+#' Daily excess returns: ME×BE/ME 5x5 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on book‐to‐market and investment,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_bemeinv25"
+returns_mebeme25_daily <- NULL
 
-#' Excess returns on portfolios sorted on book‐to‐market and operating profitability.
+#' Daily excess returns: BE/ME×INV 5x5 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on book‐to‐market and operating profitability,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_bemeop25"
+returns_bemeinv25_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and accruals.
+#' Daily excess returns: BE/ME×OP 5x5 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and accruals,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_meac25"
+returns_bemeop25_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and beta.
+#' Daily excess returns: ME×INV 5x5 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and beta,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_mebeta25"
+returns_meinv25_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and investment.
+#' Daily excess returns: ME×OP 5x5 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and investment,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_meinv25"
+returns_meop25_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and operating profitability.
+#' Daily excess returns: ME×Prior 1–0 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and operating profitability,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_meop25"
+returns_meprior10_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and short-term reversal.
+#' Daily excess returns: ME×Prior 12–2 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and short-term reversal,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_meprior10"
+returns_meprior122_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and long-term reversal.
+#' Daily excess returns: ME×Prior 60–13 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and long-term reversal,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_meprior122"
+returns_meprior6013_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and an alternative long-term reversal measure.
+#' Daily excess returns: OP×INV 5x5 (US)
 #'
-#' Monthly excess returns for 25 portfolios formed on size and an alternative long-term reversal measure,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Excess returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_meprior6013"
+returns_opinv25_daily <- NULL
 
-#' Excess returns on portfolios sorted on size and variance.
-#'
-#' Monthly excess returns for 25 portfolios formed on size and variance,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 26 columns:
+# International panels (decimals, with DATE column)
+#' @format A data frame with columns:
 #' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the portfolios.}
+#'   \item{DATE}{Integer date in YYYYMMDD format}
+#'   \item{Asset}{Returns}
 #' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_mevar25"
-
-#' Excess returns on 17 industry portfolios.
-#'
-#' Monthly excess returns for 17 industry portfolios,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 18 columns:
-#' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns on the industry portfolios.}
-#' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"returns_ind17"
-
-#' Fama–French 5 (tradable) factors and risk-free rate.
-#'
-#' Monthly observations of the Fama–French 5 factors (tradable version),
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 7 columns:
-#' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{The five factors and the risk-free rate (in decimals).}
-#' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"factors_ff5"
-
-#' Momentum (tradable) factor.
-#'
-#' Monthly observations of the momentum (tradable) factor,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 2 columns:
-#' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{Momentum}{Momentum factor (in decimals).}
-#' }
-#' @source <https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html>
-"factor_mom"
-
-#' CRSP excess returns.
-#'
-#' Monthly CRSP excess returns for individual assets,
-#' covering the period from 05/2008 to 12/2022.
-#'
-#' @format A matrix with \code{T} rows and 201 columns:
-#' \describe{
-#'   \item{Date}{Date in yyyymm format.}
-#'   \item{...}{Excess returns for each asset.}
-#' }
-#' @source <https://www.crsp.org>
-"returns_crsp"
+returns_apxj_mebeme25_int_daily <- NULL
+returns_apxj_meinv25_int_daily <- NULL
+returns_apxj_meop25_int_daily <- NULL
+returns_apxj_meprior25020_int_daily <- NULL
+returns_eu_mebeme25_int_daily <- NULL
+returns_eu_meinv25_int_daily <- NULL
+returns_eu_meop25_int_daily <- NULL
+returns_eu_meprior25020_int_daily <- NULL
+returns_jp_mebeme25_int_daily <- NULL
+returns_jp_meinv25_int_daily <- NULL
+returns_jp_meop25_int_daily <- NULL
+returns_jp_meprior25020_int_daily <- NULL
+returns_na_mebeme25_int_daily <- NULL
+returns_na_meinv25_int_daily <- NULL
+returns_na_meop25_int_daily <- NULL
+returns_na_meprior25020_int_daily <- NULL

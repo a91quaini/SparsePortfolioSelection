@@ -11,9 +11,62 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// mve_exhaustive_search_cpp
+Rcpp::List mve_exhaustive_search_cpp(const arma::vec& mu, const arma::mat& sigma, unsigned int k, double epsilon, bool stabilize_sigma, bool do_checks, bool enumerate_all, unsigned int max_samples, bool dedup_samples, bool compute_weights);
+RcppExport SEXP _SparsePortfolioSelection_mve_exhaustive_search_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP kSEXP, SEXP epsilonSEXP, SEXP stabilize_sigmaSEXP, SEXP do_checksSEXP, SEXP enumerate_allSEXP, SEXP max_samplesSEXP, SEXP dedup_samplesSEXP, SEXP compute_weightsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize_sigma(stabilize_sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_checks(do_checksSEXP);
+    Rcpp::traits::input_parameter< bool >::type enumerate_all(enumerate_allSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type max_samples(max_samplesSEXP);
+    Rcpp::traits::input_parameter< bool >::type dedup_samples(dedup_samplesSEXP);
+    Rcpp::traits::input_parameter< bool >::type compute_weights(compute_weightsSEXP);
+    rcpp_result_gen = Rcpp::wrap(mve_exhaustive_search_cpp(mu, sigma, k, epsilon, stabilize_sigma, do_checks, enumerate_all, max_samples, dedup_samples, compute_weights));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mve_miqp_search_cpp
+Rcpp::List mve_miqp_search_cpp(const arma::vec& mu, const arma::mat& sigma, unsigned int k, bool exactly_k, int m, double gamma, const arma::vec& fmin, const arma::vec& fmax, unsigned int expand_rounds, double expand_factor, double expand_tol, double mipgap, double time_limit, int threads, Rcpp::Nullable<arma::vec> x_start, Rcpp::Nullable<arma::uvec> v_start, bool compute_weights, bool normalize_wts, bool use_refit, bool verbose, double epsilon, bool stabilize_sigma, bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_mve_miqp_search_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP kSEXP, SEXP exactly_kSEXP, SEXP mSEXP, SEXP gammaSEXP, SEXP fminSEXP, SEXP fmaxSEXP, SEXP expand_roundsSEXP, SEXP expand_factorSEXP, SEXP expand_tolSEXP, SEXP mipgapSEXP, SEXP time_limitSEXP, SEXP threadsSEXP, SEXP x_startSEXP, SEXP v_startSEXP, SEXP compute_weightsSEXP, SEXP normalize_wtsSEXP, SEXP use_refitSEXP, SEXP verboseSEXP, SEXP epsilonSEXP, SEXP stabilize_sigmaSEXP, SEXP do_checksSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< bool >::type exactly_k(exactly_kSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type fmin(fminSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type fmax(fmaxSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type expand_rounds(expand_roundsSEXP);
+    Rcpp::traits::input_parameter< double >::type expand_factor(expand_factorSEXP);
+    Rcpp::traits::input_parameter< double >::type expand_tol(expand_tolSEXP);
+    Rcpp::traits::input_parameter< double >::type mipgap(mipgapSEXP);
+    Rcpp::traits::input_parameter< double >::type time_limit(time_limitSEXP);
+    Rcpp::traits::input_parameter< int >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<arma::vec> >::type x_start(x_startSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<arma::uvec> >::type v_start(v_startSEXP);
+    Rcpp::traits::input_parameter< bool >::type compute_weights(compute_weightsSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalize_wts(normalize_wtsSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_refit(use_refitSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize_sigma(stabilize_sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_checks(do_checksSEXP);
+    rcpp_result_gen = Rcpp::wrap(mve_miqp_search_cpp(mu, sigma, k, exactly_k, m, gamma, fmin, fmax, expand_rounds, expand_factor, expand_tol, mipgap, time_limit, threads, x_start, v_start, compute_weights, normalize_wts, use_refit, verbose, epsilon, stabilize_sigma, do_checks));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_sr_cpp
-double compute_sr_cpp(const arma::vec& weights, const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_sr_cpp(SEXP weightsSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP do_checksSEXP) {
+double compute_sr_cpp(const arma::vec& weights, const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, double epsilon, bool stabilize_sigma, bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_compute_sr_cpp(SEXP weightsSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP epsilonSEXP, SEXP stabilize_sigmaSEXP, SEXP do_checksSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,79 +74,123 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type selection(selectionSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_sr_cpp(weights, mu, sigma, selection, do_checks));
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize_sigma(stabilize_sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_checks(do_checksSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_sr_cpp(weights, mu, sigma, selection, epsilon, stabilize_sigma, do_checks));
     return rcpp_result_gen;
 END_RCPP
 }
 // compute_mve_sr_cpp
-double compute_mve_sr_cpp(const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_mve_sr_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP do_checksSEXP) {
+double compute_mve_sr_cpp(const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, double epsilon, bool stabilize_sigma, bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_compute_mve_sr_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP epsilonSEXP, SEXP stabilize_sigmaSEXP, SEXP do_checksSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type selection(selectionSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_mve_sr_cpp(mu, sigma, selection, do_checks));
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize_sigma(stabilize_sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_checks(do_checksSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_mve_sr_cpp(mu, sigma, selection, epsilon, stabilize_sigma, do_checks));
     return rcpp_result_gen;
 END_RCPP
 }
 // compute_mve_weights_cpp
-arma::vec compute_mve_weights_cpp(const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, const double gamma, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_mve_weights_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP gammaSEXP, SEXP do_checksSEXP) {
+arma::vec compute_mve_weights_cpp(const arma::vec& mu, const arma::mat& sigma, const arma::uvec& selection, bool normalize_w, double epsilon, bool stabilize_sigma, bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_compute_mve_weights_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP selectionSEXP, SEXP normalize_wSEXP, SEXP epsilonSEXP, SEXP stabilize_sigmaSEXP, SEXP do_checksSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type selection(selectionSEXP);
-    Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_mve_weights_cpp(mu, sigma, selection, gamma, do_checks));
+    Rcpp::traits::input_parameter< bool >::type normalize_w(normalize_wSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize_sigma(stabilize_sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_checks(do_checksSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_mve_weights_cpp(mu, sigma, selection, normalize_w, epsilon, stabilize_sigma, do_checks));
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_mve_sr_cardk_cpp
-Rcpp::List compute_mve_sr_cardk_cpp(const arma::vec& mu, const arma::mat& sigma, const unsigned int max_card, const unsigned int max_comb, const double gamma, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_compute_mve_sr_cardk_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP max_cardSEXP, SEXP max_combSEXP, SEXP gammaSEXP, SEXP do_checksSEXP) {
+// prep_covariance_cpp
+arma::mat prep_covariance_cpp(const arma::mat& sigma, double epsilon, bool stabilize);
+RcppExport SEXP _SparsePortfolioSelection_prep_covariance_cpp(SEXP sigmaSEXP, SEXP epsilonSEXP, SEXP stabilizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize(stabilizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(prep_covariance_cpp(sigma, epsilon, stabilize));
+    return rcpp_result_gen;
+END_RCPP
+}
+// normalize_weights_cpp
+arma::vec normalize_weights_cpp(const arma::vec& w, const std::string& mode, double tol, bool do_checks);
+RcppExport SEXP _SparsePortfolioSelection_normalize_weights_cpp(SEXP wSEXP, SEXP modeSEXP, SEXP tolSEXP, SEXP do_checksSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_checks(do_checksSEXP);
+    rcpp_result_gen = Rcpp::wrap(normalize_weights_cpp(w, mode, tol, do_checks));
+    return rcpp_result_gen;
+END_RCPP
+}
+// eps_ridge_cpp
+double eps_ridge_cpp();
+RcppExport SEXP _SparsePortfolioSelection_eps_ridge_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(eps_ridge_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// safe_chol_cpp
+arma::mat safe_chol_cpp(const arma::mat& Q, double base_bump, unsigned int max_tries);
+RcppExport SEXP _SparsePortfolioSelection_safe_chol_cpp(SEXP QSEXP, SEXP base_bumpSEXP, SEXP max_triesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< double >::type base_bump(base_bumpSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type max_tries(max_triesSEXP);
+    rcpp_result_gen = Rcpp::wrap(safe_chol_cpp(Q, base_bump, max_tries));
+    return rcpp_result_gen;
+END_RCPP
+}
+// design_from_moments_cpp
+Rcpp::List design_from_moments_cpp(const arma::vec& mu, const arma::mat& sigma, double n_obs, double epsilon, bool stabilize_sigma);
+RcppExport SEXP _SparsePortfolioSelection_design_from_moments_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP n_obsSEXP, SEXP epsilonSEXP, SEXP stabilize_sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
-    Rcpp::traits::input_parameter< const unsigned int >::type max_card(max_cardSEXP);
-    Rcpp::traits::input_parameter< const unsigned int >::type max_comb(max_combSEXP);
-    Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_mve_sr_cardk_cpp(mu, sigma, max_card, max_comb, gamma, do_checks));
-    return rcpp_result_gen;
-END_RCPP
-}
-// simulate_mve_sr_cpp
-Rcpp::List simulate_mve_sr_cpp(const arma::vec& mu, const arma::mat& sigma, const unsigned int n_obs, const unsigned int max_card, const unsigned int max_comb, const bool do_checks);
-RcppExport SEXP _SparsePortfolioSelection_simulate_mve_sr_cpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP n_obsSEXP, SEXP max_cardSEXP, SEXP max_combSEXP, SEXP do_checksSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type sigma(sigmaSEXP);
-    Rcpp::traits::input_parameter< const unsigned int >::type n_obs(n_obsSEXP);
-    Rcpp::traits::input_parameter< const unsigned int >::type max_card(max_cardSEXP);
-    Rcpp::traits::input_parameter< const unsigned int >::type max_comb(max_combSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_checks(do_checksSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_mve_sr_cpp(mu, sigma, n_obs, max_card, max_comb, do_checks));
+    Rcpp::traits::input_parameter< double >::type n_obs(n_obsSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type stabilize_sigma(stabilize_sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(design_from_moments_cpp(mu, sigma, n_obs, epsilon, stabilize_sigma));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_SparsePortfolioSelection_compute_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_sr_cpp, 5},
-    {"_SparsePortfolioSelection_compute_mve_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cpp, 4},
-    {"_SparsePortfolioSelection_compute_mve_weights_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_weights_cpp, 5},
-    {"_SparsePortfolioSelection_compute_mve_sr_cardk_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cardk_cpp, 6},
-    {"_SparsePortfolioSelection_simulate_mve_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_simulate_mve_sr_cpp, 6},
+    {"_SparsePortfolioSelection_mve_exhaustive_search_cpp", (DL_FUNC) &_SparsePortfolioSelection_mve_exhaustive_search_cpp, 10},
+    {"_SparsePortfolioSelection_mve_miqp_search_cpp", (DL_FUNC) &_SparsePortfolioSelection_mve_miqp_search_cpp, 23},
+    {"_SparsePortfolioSelection_compute_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_sr_cpp, 7},
+    {"_SparsePortfolioSelection_compute_mve_sr_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_sr_cpp, 6},
+    {"_SparsePortfolioSelection_compute_mve_weights_cpp", (DL_FUNC) &_SparsePortfolioSelection_compute_mve_weights_cpp, 7},
+    {"_SparsePortfolioSelection_prep_covariance_cpp", (DL_FUNC) &_SparsePortfolioSelection_prep_covariance_cpp, 3},
+    {"_SparsePortfolioSelection_normalize_weights_cpp", (DL_FUNC) &_SparsePortfolioSelection_normalize_weights_cpp, 4},
+    {"_SparsePortfolioSelection_eps_ridge_cpp", (DL_FUNC) &_SparsePortfolioSelection_eps_ridge_cpp, 0},
+    {"_SparsePortfolioSelection_safe_chol_cpp", (DL_FUNC) &_SparsePortfolioSelection_safe_chol_cpp, 3},
+    {"_SparsePortfolioSelection_design_from_moments_cpp", (DL_FUNC) &_SparsePortfolioSelection_design_from_moments_cpp, 5},
     {NULL, NULL, 0}
 };
 

@@ -41,32 +41,21 @@ assign("factors_ff5", factors_ff5, envir = SparsePortfolioSelection)
 # --- Begin tests ---
 
 test_that("load_data rejects invalid type", {
-  expect_error(load_data(type = "x"), "Invalid 'type'")
+  expect_error(load_data(type = "x"), "type must be either 'US' or 'International'")
 })
 
-test_that("load_data('p') returns a matrix with correct dimensions", {
-  # For portfolios: each dummy portfolio is 5 x 2 (Date + 1 return column), so after dropping Date,
-  # each contributes 1 column. There are 13 portfolio objects.
-  data <- load_data(type = "p")
+test_that("load_data('US') returns a matrix with rows/cols > 0", {
+  data <- load_data(type = "US")
   expect_true(is.matrix(data))
-  expect_equal(nrow(data), 176)
-  expect_equal(ncol(data), 317)
+  expect_gt(nrow(data), 0)
+  expect_gt(ncol(data), 0)
 })
 
-test_that("load_data('i') returns a matrix with correct dimensions", {
-  # For individual assets (CRSP): dummy CRSP_returns is 5 x 6; dropping Date leaves 5 columns.
-  data <- load_data(type = "i")
+test_that("load_data('International') returns a matrix with rows/cols > 0", {
+  data <- load_data(type = "International")
   expect_true(is.matrix(data))
-  expect_equal(nrow(data), 176)
-  expect_equal(ncol(data), 200)
-})
-
-test_that("load_data('f') returns a matrix with correct dimensions", {
-  # For factors: dummy factors_ff5 is 5 x 7; dropping Date leaves 6 columns.
-  data <- load_data(type = "f")
-  expect_true(is.matrix(data))
-  expect_equal(nrow(data), 176)
-  expect_equal(ncol(data), 6)
+  expect_gt(nrow(data), 0)
+  expect_gt(ncol(data), 0)
 })
 
 # ##################################################################
