@@ -65,8 +65,7 @@ coverage/
 # Simulation artifacts
 inst/simulations/results/
 
-# Data: keep package-ready data/, ignore large raw inputs in data-raw
-data-raw/**/*.csv
+# Data: keep package-ready data/, ignore large raw inputs in data-raw (but keep .csv)
 data-raw/**/*.tsv
 data-raw/**/*.txt
 data-raw/**/*.jls

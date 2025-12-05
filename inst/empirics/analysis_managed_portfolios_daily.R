@@ -11,7 +11,7 @@ library(SparsePortfolioSelection)
 # Configuration
 PANEL_TYPE <- "US"      # "US" or "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 300         # subset of assets to use
+N_ASSETS <- 10         # subset of assets to use
 RNG_SEED <- 12345
 W_IN <- 252             # in-sample length (days)
 W_OUT <- 30             # OOS block length (non-overlapping)
