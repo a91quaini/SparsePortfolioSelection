@@ -126,6 +126,7 @@ run_oos_evaluation <- function(R,
   status_mat <- matrix("unknown", nrow = W, ncol = K)
 
   for (w in seq_len(W)) {
+    message(sprintf("window %d / %d", w, W))
     idx_in <- windows[[w]]$idx_in
     idx_out <- windows[[w]]$idx_out
     Rin <- R[idx_in, , drop = FALSE]
