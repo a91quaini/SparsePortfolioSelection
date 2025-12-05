@@ -11,14 +11,14 @@ library(SparsePortfolioSelection)
 # Configuration
 PANEL_TYPE <- "US"      # "US" or "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 10         # subset of assets to use
+N_ASSETS <- 274         # subset of assets to use
 RNG_SEED <- 12345
 W_IN <- 252             # in-sample length (days)
 W_OUT <- 30             # OOS block length (non-overlapping)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
-K_STEP <- 1
-K_CAP <- 500
+K_STEP <- 5
+K_CAP <- N_ASSETS - 1
 METHOD <- "lasso"    # "lasso" | "elnet" | "miqp"
 METHOD_LABEL <- METHOD
 METHOD_STEM <- METHOD

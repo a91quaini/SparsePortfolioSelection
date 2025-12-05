@@ -133,6 +133,7 @@ run_oos_evaluation <- function(R,
     Rout <- R[idx_out, , drop = FALSE]
 
     for (ik in seq_along(k_grid)) {
+      message(sprintf("  k-grid %d / %d", ik, K))
       k <- k_grid[ik]
       res <- do.call(compute_weights_fn, c(list(Rin, k), compute_weights_fn_params))
       if (is.null(res$weights)) stop("compute_weights_fn must return a `weights` element.")
