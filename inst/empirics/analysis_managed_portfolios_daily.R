@@ -6,20 +6,40 @@
 #  - runs rolling/expanding OOS Sharpe evaluation for a chosen solver (lasso/elnet/miqp),
 #  - saves CSV results and plots under inst/empirics/{results,figures}.
 
+## ---- thread control: must be at the very top ------------------------------
+suppressPackageStartupMessages({
+  if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
+    RhpcBLASctl::blas_set_num_threads(12L)
+    RhpcBLASctl::omp_set_num_threads(12L)
+    cat("BLAS threads set to:",
+        RhpcBLASctl::blas_get_num_procs(), "\n")
+    cat("OpenMP max threads set to:",
+        RhpcBLASctl::omp_get_max_threads(), "\n")
+  } else {
+    warning("Package 'RhpcBLASctl' not available; falling back to env vars.")
+    Sys.setenv(
+      OMP_NUM_THREADS       = "12",
+      OPENBLAS_NUM_THREADS  = "12",
+      MKL_NUM_THREADS       = "12",
+      BLIS_NUM_THREADS      = "12"
+    )
+  }
+})
+
 library(SparsePortfolioSelection)
 
 # Configuration
-PANEL_TYPE <- "US"      # "US" or "International"
+PANEL_TYPE <- "International"      # "US" or "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 274         # subset of assets to use
+N_ASSETS <- 400         # subset of assets to use
 RNG_SEED <- 12345
-W_IN <- 252             # in-sample length (days)
+W_IN <- 252 * 3             # in-sample length (days)
 W_OUT <- 30             # OOS block length (non-overlapping)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
 K_STEP <- 3
 K_CAP <- N_ASSETS - 1
-METHOD <- "lasso"    # "lasso" | "elnet" | "miqp"
+METHOD <- "elnet"    # "lasso" | "elnet" | "miqp"
 METHOD_LABEL <- METHOD
 METHOD_STEM <- METHOD
 
@@ -43,11 +63,12 @@ if (k_max < K_MIN) stop("k_max < K_MIN; reduce K_MIN or increase N.")
 k_grid <- seq.int(K_MIN, k_max, by = K_STEP)
 
 # Define parameter lists
-# alpha_grid = seq(0.30, 0.95, by = 0.05)
+alpha_grid = 1.00
+alpha_grid = seq(0.30, 1.00, by = 0.05)
 lasso_params <- list(
   nlambda = 300L,
   lambda_min_ratio = 1e-2,
-  alpha = 1,
+  alpha = alpha_grid,
   n_folds = 5L,
   nadd = 80L,
   nnested = 3L,
@@ -96,7 +117,9 @@ compute_weights_fn <- if (METHOD == "miqp") {
 message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
 # Optional parallel run: set PARALLEL <- TRUE to enable
-PARALLEL <- TRUE
+PARALLEL <- FALSE
+# n_threads = parallel::detectCores(logical = TRUE) - 1L
+n_threads = 12
 if (PARALLEL) {
   n_cores <- max(1L, parallel::detectCores(logical = TRUE) - 1L)
   sr_vec <- run_oos_evaluation_parallel(
