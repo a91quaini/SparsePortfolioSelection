@@ -278,9 +278,9 @@ plot_mve_sr_decomposition <- function(results, save = FALSE) {
   df_sr <- data.frame(
     k = rep(k_grid, 3),
     sr = c(pop_sr, sel_mean, est_mean),
-    curve = rep(c("Population", "Oracle", "Sample"), each = length(k_grid))
+    curve = rep(c("True", "Oracle", "Sample"), each = length(k_grid))
   )
-  df_sr$curve <- factor(df_sr$curve, levels = c("Population", "Oracle", "Sample"))
+  df_sr$curve <- factor(df_sr$curve, levels = c("True", "Oracle", "Sample"))
 
   sr_plot <- ggplot2::ggplot(df_sr, ggplot2::aes(x = k, y = sr, color = curve)) +
     ggplot2::geom_line(linewidth = 1.1) +
@@ -294,16 +294,16 @@ plot_mve_sr_decomposition <- function(results, save = FALSE) {
       axis.text = ggplot2::element_text(size = 12)
     )
 
-  alloc_risk <- pop_sr - sel_mean
-  est_risk <- sel_mean - est_mean
+  allocation_risk <- pop_sr - sel_mean
+  selection_risk <- sel_mean - est_mean
   df_risk <- data.frame(
     k = k_grid,
-    Selection = alloc_risk,
-    Estimation = est_risk
+    Selection = selection_risk,
+    Allocation = allocation_risk
   )
-  df_risk_long <- tidyr::pivot_longer(df_risk, cols = c("Selection", "Estimation"),
+  df_risk_long <- tidyr::pivot_longer(df_risk, cols = c("Selection", "Allocation"),
                                       names_to = "component", values_to = "value")
-  df_risk_long$component <- factor(df_risk_long$component, levels = c("Selection", "Estimation"))
+  df_risk_long$component <- factor(df_risk_long$component, levels = c("Selection", "Allocation"))
 
   risk_plot <- ggplot2::ggplot(df_risk_long, ggplot2::aes(x = k, y = value, fill = component)) +
     ggplot2::geom_area(position = "stack", alpha = 0.8) +

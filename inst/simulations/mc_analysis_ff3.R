@@ -17,7 +17,7 @@ n_assets <- 100              # [25, 50, 100]
 n_obs <- 480                 # [120 240 480]
 k_grid <- 2:(n_assets-1)
 n_MC <- 200                  # 200
-search_method <- "lasso"     # set to "lasso" or "miqp"
+search_method <- "miqp"     # set to "lasso" or "miqp"
 
 # 2) Search function parameters
 lasso_params <- list(

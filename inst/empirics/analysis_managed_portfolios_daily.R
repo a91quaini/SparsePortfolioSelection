@@ -35,11 +35,11 @@ PANEL_TYPE <- "US"      # "US" or "International"
 MISSINGS <- "median"    # how to treat missing values
 N_ASSETS <- 50         # subset of assets to use -> 274 for "US" and 400 for "International"
 RNG_SEED <- 12345
-W_IN <- 252 * 4             # in-sample length (days)
-W_OUT <- 1             # OOS block length (non-overlapping)
+W_IN <- 252 * 2             # in-sample length (days)
+W_OUT <- 5             # OOS block length (non-overlapping)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
-K_STEP <- 3
+K_STEP <- 5
 K_CAP <- N_ASSETS - 1
 METHOD <- "elnet"    # "lasso" | "elnet" | "miqp"
 
@@ -123,7 +123,7 @@ compute_weights_fn <- if (METHOD == "miqp") {
 message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
 # Optional parallel run: set PARALLEL <- TRUE to enable
-PARALLEL <- FALSE
+PARALLEL <- TRUE
 # n_threads = parallel::detectCores(logical = TRUE) - 1L
 n_threads = 12
 if (PARALLEL) {
