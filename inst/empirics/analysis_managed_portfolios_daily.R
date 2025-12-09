@@ -7,10 +7,12 @@
 #  - saves CSV results and plots under inst/empirics/{results,figures}.
 
 ## ---- thread control: must be at the very top ------------------------------
+Nn = 1L
+# Nn = 12L
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
-    RhpcBLASctl::blas_set_num_threads(12L)
-    RhpcBLASctl::omp_set_num_threads(12L)
+    RhpcBLASctl::blas_set_num_threads(Nn)
+    RhpcBLASctl::omp_set_num_threads(Nn)
     cat("BLAS threads set to:",
         RhpcBLASctl::blas_get_num_procs(), "\n")
     cat("OpenMP max threads set to:",
@@ -18,10 +20,10 @@ suppressPackageStartupMessages({
   } else {
     warning("Package 'RhpcBLASctl' not available; falling back to env vars.")
     Sys.setenv(
-      OMP_NUM_THREADS       = "12",
-      OPENBLAS_NUM_THREADS  = "12",
-      MKL_NUM_THREADS       = "12",
-      BLIS_NUM_THREADS      = "12"
+      OMP_NUM_THREADS       = Nn,
+      OPENBLAS_NUM_THREADS  = Nn,
+      MKL_NUM_THREADS       = Nn,
+      BLIS_NUM_THREADS      = Nn
     )
   }
 })
@@ -29,19 +31,17 @@ suppressPackageStartupMessages({
 library(SparsePortfolioSelection)
 
 # Configuration
-PANEL_TYPE <- "International"      # "US" or "International"
+PANEL_TYPE <- "US"      # "US" or "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 400         # subset of assets to use
+N_ASSETS <- 50         # subset of assets to use -> 274 for "US" and 400 for "International"
 RNG_SEED <- 12345
-W_IN <- 252 * 3             # in-sample length (days)
-W_OUT <- 30             # OOS block length (non-overlapping)
+W_IN <- 252 * 4             # in-sample length (days)
+W_OUT <- 1             # OOS block length (non-overlapping)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
 K_STEP <- 3
 K_CAP <- N_ASSETS - 1
 METHOD <- "elnet"    # "lasso" | "elnet" | "miqp"
-METHOD_LABEL <- METHOD
-METHOD_STEM <- METHOD
 
 OUT_DIR <- file.path("inst", "empirics", "results", "managed_portfolios_daily")
 FIG_DIR <- file.path("inst", "empirics", "figures", "managed_portfolios_daily")
@@ -97,6 +97,12 @@ miqp_params <- list(
   verbose = FALSE,
   stabilize_sigma = TRUE
 )
+
+# Decide filename/label stems (append _refit if refit enabled)
+refit_suffix <- if ((METHOD %in% c("lasso", "elnet") && isTRUE(lasso_params$use_refit)) ||
+                    (METHOD == "miqp" && isTRUE(miqp_params$use_refit))) "_refit" else ""
+METHOD_LABEL <- paste0(METHOD, refit_suffix)
+METHOD_STEM <- paste0(METHOD, refit_suffix)
 
 compute_weights_fn <- if (METHOD == "miqp") {
   function(Rin, k) {
