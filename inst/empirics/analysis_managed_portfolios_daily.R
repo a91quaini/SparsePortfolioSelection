@@ -7,8 +7,8 @@
 #  - saves CSV results and plots under inst/empirics/{results,figures}.
 
 ## ---- thread control: must be at the very top ------------------------------
-Nn = 1L
-# Nn = 12L
+# Nn = 1L
+Nn = 12L
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
     RhpcBLASctl::blas_set_num_threads(Nn)
@@ -33,15 +33,23 @@ library(SparsePortfolioSelection)
 # Configuration
 PANEL_TYPE <- "US"      # "US" or "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 50         # subset of assets to use -> 274 for "US" and 400 for "International"
+N_ASSETS <- 274         # subset of assets to use -> 274 for "US" and 400 for "International"
 RNG_SEED <- 12345
-W_IN <- 252 * 2             # in-sample length (days)
-W_OUT <- 5             # OOS block length (non-overlapping)
+W_IN <- 252             # in-sample length (days)
+W_OUT <- 30             # OOS block length (non-overlapping)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
-K_STEP <- 5
+K_STEP <- 9
 K_CAP <- N_ASSETS - 1
-METHOD <- "elnet"    # "lasso" | "elnet" | "miqp"
+METHOD <- "lasso"    # "lasso" | "elnet" | "miqp"
+REFIT <- TRUE
+PARALLEL <- FALSE 
+
+# Decide filename/label stems (append _refit if refit enabled)
+refit_suffix <- if ((METHOD %in% c("lasso", "elnet") && REFIT) ||
+                    (METHOD == "miqp" && REFIT)) "_refit" else ""
+METHOD_LABEL <- paste0(METHOD, refit_suffix)
+METHOD_STEM <- paste0(METHOD, refit_suffix)
 
 OUT_DIR <- file.path("inst", "empirics", "results", "managed_portfolios_daily")
 FIG_DIR <- file.path("inst", "empirics", "figures", "managed_portfolios_daily")
@@ -63,11 +71,13 @@ if (k_max < K_MIN) stop("k_max < K_MIN; reduce K_MIN or increase N.")
 k_grid <- seq.int(K_MIN, k_max, by = K_STEP)
 
 # Define parameter lists
-alpha_grid = 1.00
 alpha_grid = seq(0.30, 1.00, by = 0.05)
+if (METHOD == "lasso") {
+  alpha_grid = 1.00
+}
 lasso_params <- list(
-  nlambda = 300L,
-  lambda_min_ratio = 1e-2,
+  nlambda = 100L, # 300L,
+  lambda_min_ratio = 1e-3, # 1e-2,
   alpha = alpha_grid,
   n_folds = 5L,
   nadd = 80L,
@@ -76,7 +86,7 @@ lasso_params <- list(
   stabilize_sigma = TRUE,
   compute_weights = TRUE,
   normalize_weights = FALSE,
-  use_refit = FALSE
+  use_refit = REFIT
 )
 
 miqp_params <- list(
@@ -93,16 +103,10 @@ miqp_params <- list(
   threads = 0,
   compute_weights = TRUE,
   normalize_weights = FALSE,
-  use_refit = FALSE,
+  use_refit = REFIT,
   verbose = FALSE,
   stabilize_sigma = TRUE
 )
-
-# Decide filename/label stems (append _refit if refit enabled)
-refit_suffix <- if ((METHOD %in% c("lasso", "elnet") && isTRUE(lasso_params$use_refit)) ||
-                    (METHOD == "miqp" && isTRUE(miqp_params$use_refit))) "_refit" else ""
-METHOD_LABEL <- paste0(METHOD, refit_suffix)
-METHOD_STEM <- paste0(METHOD, refit_suffix)
 
 compute_weights_fn <- if (METHOD == "miqp") {
   function(Rin, k) {
@@ -123,7 +127,6 @@ compute_weights_fn <- if (METHOD == "miqp") {
 message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
 # Optional parallel run: set PARALLEL <- TRUE to enable
-PARALLEL <- TRUE
 # n_threads = parallel::detectCores(logical = TRUE) - 1L
 n_threads = 12
 if (PARALLEL) {
