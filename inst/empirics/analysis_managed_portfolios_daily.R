@@ -7,8 +7,8 @@
 #  - saves CSV results and plots under inst/empirics/{results,figures}.
 
 ## ---- thread control: must be at the very top ------------------------------
-# Nn = 1L
-Nn = 12L
+Nn = 1L
+# Nn = 12L
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
     RhpcBLASctl::blas_set_num_threads(Nn)
@@ -28,6 +28,10 @@ suppressPackageStartupMessages({
   }
 })
 
+# Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
+MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
+if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
+
 library(SparsePortfolioSelection)
 
 # Configuration
@@ -41,7 +45,7 @@ OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
 K_STEP <- 9
 K_CAP <- N_ASSETS - 1
-METHOD <- "lasso"    # "lasso" | "elnet" | "miqp"
+METHOD <- "miqp"    # "lasso" | "elnet" | "miqp"
 REFIT <- TRUE
 PARALLEL <- FALSE 
 
@@ -100,7 +104,7 @@ miqp_params <- list(
   expand_tol = 1e-2,
   mipgap = 1e-4,
   time_limit = 100,
-  threads = 0,
+  threads = MIQP_THREADS,
   compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = REFIT,
