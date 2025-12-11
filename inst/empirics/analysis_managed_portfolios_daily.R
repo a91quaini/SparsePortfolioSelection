@@ -7,8 +7,8 @@
 #  - saves CSV results and plots under inst/empirics/{results,figures}.
 
 ## ---- thread control: must be at the very top ------------------------------
-Nn = 1L
-# Nn = 12L
+# Nn = 1L
+Nn = 4L
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
     RhpcBLASctl::blas_set_num_threads(Nn)
