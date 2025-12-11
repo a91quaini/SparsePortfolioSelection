@@ -91,11 +91,11 @@ test_that("miqp budget/normalize_weights toggles sum=1 (requires Gurobi)", {
 test_that("lasso search respects k edges", {
   set.seed(123)
   R <- matrix(rnorm(200), nrow = 50, ncol = 4)
-  res0 <- mve_lasso_search_return_based(R, k = 0)
+  res0 <- mve_lasso_search_from_returns(R, k = 0)
   expect_equal(res0$selection, integer())
   expect_equal(res0$weights, numeric(ncol(R)))
 
-  resfull <- mve_lasso_search_return_based(R, k = ncol(R), compute_weights = TRUE)
+  resfull <- mve_lasso_search_from_returns(R, k = ncol(R), compute_weights = TRUE)
   expect_equal(length(resfull$selection), ncol(R))
   expect_equal(length(resfull$weights), ncol(R))
 })
@@ -104,7 +104,7 @@ test_that("lasso search lambda override and standardize", {
   set.seed(321)
   R <- matrix(rnorm(300), nrow = 60, ncol = 5)
   # small lambda to allow dense solution
-  res <- mve_lasso_search_return_based(R, k = 3, lambda = exp(seq(0, -4, length.out = 20)),
+  res <- mve_lasso_search_from_returns(R, k = 3, lambda = exp(seq(0, -4, length.out = 20)),
                           standardize = TRUE)
   expect_true(length(res$selection) <= 3)
 })
@@ -112,7 +112,7 @@ test_that("lasso search lambda override and standardize", {
 test_that("lasso search closest-k behavior", {
   set.seed(42)
   R <- matrix(rnorm(500), nrow = 100, ncol = 5)
-  res <- mve_lasso_search_return_based(R, k = 2, nlambda = 50)
+  res <- mve_lasso_search_from_returns(R, k = 2, nlambda = 50)
   expect_true(length(res$selection) <= 2)
   expect_equal(length(res$weights), ncol(R))
   expect_true(res$status %in% c("LASSO_PATH_EXACT_K", "LASSO_PATH_CLOSEST", "LASSO_PATH_OVER_K"))
@@ -121,7 +121,7 @@ test_that("lasso search closest-k behavior", {
 test_that("lasso alpha grid with CV selects feasible alpha", {
   set.seed(4242)
   R <- matrix(rnorm(400), nrow = 80, ncol = 5)
-  res <- mve_lasso_search_return_based(R, k = 2, alpha = c(0.2, 0.5, 0.8), n_folds = 3)
+  res <- mve_lasso_search_from_returns(R, k = 2, alpha = c(0.2, 0.5, 0.8), n_folds = 3)
   expect_true(res$alpha %in% c(0.2, 0.5, 0.8))
   expect_true(length(res$selection) <= 2)
 })
@@ -129,14 +129,14 @@ test_that("lasso alpha grid with CV selects feasible alpha", {
 test_that("lasso search densification hits k when possible", {
   set.seed(777)
   R <- matrix(rnorm(400), nrow = 80, ncol = 5)
-  res <- mve_lasso_search_return_based(R, k = 3, nlambda = 20, nadd = 30, nnested = 2)
+  res <- mve_lasso_search_from_returns(R, k = 3, nlambda = 20, nadd = 30, nnested = 2)
   expect_true(length(res$selection) <= 3)
 })
 
 test_that("lasso search normalize_weights path", {
   set.seed(99)
   R <- matrix(rnorm(320), nrow = 80, ncol = 4)
-  res <- mve_lasso_search_return_based(R, k = 2, normalize_weights = TRUE, use_refit = TRUE)
+  res <- mve_lasso_search_from_returns(R, k = 2, normalize_weights = TRUE, use_refit = TRUE)
   expect_equal(length(res$weights), ncol(R))
   expect_true(abs(sum(res$weights)) > 0 || sum(abs(res$weights)) == 0)
 })
@@ -144,8 +144,8 @@ test_that("lasso search normalize_weights path", {
 test_that("lasso search different eps/stabilization choices", {
   set.seed(7)
   R <- matrix(rnorm(300), nrow = 75, ncol = 4)
-  res1 <- mve_lasso_search_return_based(R, k = 2, epsilon = 0, stabilize_sigma = FALSE)
-  res2 <- mve_lasso_search_return_based(R, k = 2, epsilon = 1e-3, stabilize_sigma = TRUE)
+  res1 <- mve_lasso_search_from_returns(R, k = 2, epsilon = 0, stabilize_sigma = FALSE)
+  res2 <- mve_lasso_search_from_returns(R, k = 2, epsilon = 1e-3, stabilize_sigma = TRUE)
   expect_equal(length(res1$weights), ncol(R))
   expect_equal(length(res2$weights), ncol(R))
 })
@@ -163,11 +163,11 @@ test_that("lasso moment-based path basic run", {
 test_that("lasso search respects k edges", {
   set.seed(123)
   R <- matrix(rnorm(200), nrow = 50, ncol = 4)
-  res0 <- mve_lasso_search_return_based(R, k = 0)
+  res0 <- mve_lasso_search_from_returns(R, k = 0)
   expect_equal(res0$selection, integer())
   expect_equal(res0$weights, numeric(ncol(R)))
 
-  resfull <- mve_lasso_search_return_based(R, k = ncol(R), compute_weights = TRUE)
+  resfull <- mve_lasso_search_from_returns(R, k = ncol(R), compute_weights = TRUE)
   expect_equal(length(resfull$selection), ncol(R))
   expect_equal(length(resfull$weights), ncol(R))
 })

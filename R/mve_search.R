@@ -105,149 +105,6 @@ mve_miqp_search <- function(mu, sigma, k,
   res
 }
 
-#' LASSO relaxation heuristic for sparse MVE selection (glmnet backend, return-based)
-#'
-#' Pragmatic LASSO-based selector: builds a synthetic design from moments
-#' \eqn{(mu, Sigma, T)}, fits a glmnet path, and chooses the support whose
-#' cardinality is closest to `k` (preferring \eqn{\le k}). Optionally refits
-#' exact MVE weights on the chosen support. Uses the same stabilized covariance
-#' as the MIQP/exhaustive routines for consistency.
-#'
-#' @param R Numeric matrix of returns (rows = observations, cols = assets).
-#' @param k Target cardinality.
-#' @param nlambda Number of lambdas for glmnet path (ignored if `lambda` given).
-#' @param lambda_min_ratio Smallest lambda as a fraction of lambda_max.
-#' @param lambda Optional descending lambda grid.
-#' @param alpha Elastic-net mixing parameter (1 = LASSO).
-#' @param standardize Logical; whether glmnet standardizes the synthetic design.
-#' @param epsilon Ridge for covariance stabilization.
-#' @param stabilize_sigma Logical; symmetrize/ridge-stabilize sigma.
-#' @param compute_weights Logical; return weights (else zeros).
-#' @param normalize_weights Logical; post-scale weights via
-#'   `normalize_weights_cpp(mode="relative")`.
-#' @param use_refit Logical; refit exact MVE on selected support.
-#' @param do_checks Logical; validate inputs.
-#'
-#' @return List with `selection` (1-based), `weights`, `sr`, `status`, `lambda`, `alpha`.
-#' @export
-mve_lasso_search_return_based <- function(
-    R,
-    k,
-    nlambda = 100L,
-    lambda_min_ratio = 1e-3,
-    lambda = NULL,
-    alpha = 1,
-    n_folds = 5L,
-    nadd = 80L,
-    nnested = 2L,
-    standardize = FALSE,
-    epsilon = eps_ridge_cpp(),
-    stabilize_sigma = TRUE,
-    compute_weights = TRUE,
-    normalize_weights = FALSE,
-    use_refit = FALSE,
-    do_checks = FALSE
-) {
-  if (!requireNamespace("glmnet", quietly = TRUE)) {
-    stop("Package 'glmnet' is required for mve_lasso_search().")
-  }
-
-  if (do_checks) {
-    if (!is.matrix(R) || !is.numeric(R)) stop("R must be a numeric matrix.")
-    if (nrow(R) < 2L) stop("R must have at least 2 rows.")
-    if (ncol(R) < 1L) stop("R must have at least 1 column.")
-    if (!is.numeric(k) || k < 0 || k > ncol(R)) stop("k must be between 0 and ncol(R).")
-    if (!is.null(lambda)) {
-      if (any(!is.finite(lambda)) || any(lambda <= 0)) stop("lambda must be positive/finite.")
-    }
-    if (!is.finite(epsilon)) stop("epsilon must be finite.")
-  }
-
-  Tobs <- nrow(R)
-  N <- ncol(R)
-
-  alpha_info <- .validate_alpha_grid(alpha)
-  alpha_grid <- alpha_info$grid
-  alpha_used <- alpha_grid[1]
-  if (alpha_info$is_grid && length(alpha_grid) > 1) {
-    alpha_used <- .cv_alpha_return(R, k, alpha_grid,
-                                   nlambda, lambda_min_ratio,
-                                   nadd, nnested,
-                                   standardize, epsilon, stabilize_sigma,
-                                   compute_weights, normalize_weights, use_refit,
-                                   n_folds)
-  }
-
-  # Fast exits
-  if (k == 0) {
-    return(list(selection = integer(), weights = numeric(N), sr = 0, status = "LASSO_EMPTY", lambda = NA_real_, alpha = alpha))
-  }
-  if (k >= N) {
-    mu <- colMeans(R)
-    sigma <- stats::cov(R)
-    sigma_s <- prep_covariance_cpp(sigma, epsilon, stabilize_sigma)
-    sr_full <- compute_mve_sr_cpp(mu, sigma_s, selection = integer(), epsilon = epsilon,
-                                  stabilize_sigma = FALSE, do_checks = FALSE)
-    w_full <- if (compute_weights) {
-      compute_mve_weights_cpp(mu, sigma_s, selection = integer(), normalize_w = normalize_weights,
-                              epsilon = epsilon, stabilize_sigma = FALSE, do_checks = FALSE)
-    } else {
-      numeric(N)
-    }
-    return(list(selection = seq_len(N), weights = w_full, sr = sr_full, status = "LASSO_FULL", lambda = NA_real_, alpha = alpha))
-  }
-
-  mu <- colMeans(R)
-  sigma <- stats::cov(R)
-  sigma_s <- prep_covariance_cpp(sigma, epsilon, stabilize_sigma)
-
-  design <- .design_from_moments(mu, sigma_s, Tobs)
-  X <- design$X
-  y <- design$y
-
-  sel <- .select_lasso_support(X, y, k,
-                               nlambda = nlambda,
-                               lambda_min_ratio = lambda_min_ratio,
-                               lambda_override = lambda,
-                               alpha = alpha_used,
-                               nadd = nadd,
-                               nnested = nnested,
-                               standardize = standardize)
-
-  beta_sel <- sel$beta
-  support <- sel$support
-  lambda_sel <- sel$lambda
-  status <- sel$status
-
-  weights <- numeric(N)
-  if (compute_weights) {
-    if (use_refit && length(support) > 0) {
-      weights <- compute_mve_weights_cpp(mu, sigma_s, selection = as.integer(support - 1),
-                                         normalize_w = normalize_weights,
-                                         epsilon = epsilon, stabilize_sigma = FALSE, do_checks = FALSE)
-    } else {
-      weights[support] <- beta_sel[support]
-      if (normalize_weights) {
-        weights <- normalize_weights_cpp(weights, mode = "relative", tol = 1e-6, do_checks = FALSE)
-      }
-    }
-  }
-
-  sr <- if (length(weights) == 0) 0 else {
-    compute_sr_cpp(weights, mu, sigma_s, selection = integer(), epsilon = epsilon,
-                   stabilize_sigma = FALSE, do_checks = FALSE)
-  }
-
-  list(
-    selection = as.integer(support),
-    weights = as.numeric(weights),
-    sr = as.numeric(sr),
-    status = status,
-    lambda = lambda_sel,
-    alpha = alpha_used
-  )
-}
-
 #' LASSO relaxation heuristic for sparse MVE selection (moment-based)
 #'
 #' Variant that takes precomputed moments (`mu`, `sigma`) and an assumed sample
@@ -257,7 +114,7 @@ mve_lasso_search_return_based <- function(
 #' @param mu Numeric mean vector.
 #' @param sigma Numeric covariance matrix.
 #' @param n_obs Sample size underlying the moments.
-#' @inheritParams mve_lasso_search_return_based
+#' @inheritParams mve_lasso_search_from_returns
 #'
 #' @return List with `selection` (1-based), `weights`, `sr`, `status`, `lambda`, `alpha`.
 #' @export
@@ -378,99 +235,81 @@ mve_lasso_search <- function(
   )
 }
 
-# Build synthetic design X, y from moments (mu, Sigma, T) as in Julia utils.
-.design_from_moments <- function(mu, sigma_s, Tobs) {
-  design_from_moments_cpp(mu, sigma_s, Tobs, eps_ridge_cpp(), FALSE)
-}
-
-.safe_chol <- function(Q, base_bump = 1e-10, max_tries = 8) {
-  safe_chol_cpp(Q, base_bump = base_bump, max_tries = max_tries)
-}
-
-.select_lasso_support <- function(X, y, k,
-                                  nlambda, lambda_min_ratio,
-                                  lambda_override,
-                                  alpha,
-                                  nadd = 80L,
-                                  nnested = 2L,
-                                  standardize = FALSE) {
-  current_lambda_min_ratio <- lambda_min_ratio
-  best <- NULL
-
-  for (attempt in 1:3) {
-    glm_args <- list(x = X, y = y, alpha = alpha, intercept = FALSE, standardize = standardize)
-    if (!is.null(lambda_override)) {
-      glm_args$lambda <- lambda_override
-    } else {
-      glm_args$nlambda <- as.integer(nlambda)
-      glm_args$lambda.min.ratio <- current_lambda_min_ratio
+#' LASSO relaxation heuristic for sparse MVE selection (glmnet backend, return-based)
+#'
+#' Pragmatic LASSO-based selector: builds a synthetic design from moments
+#' \eqn{(mu, Sigma, T)}, fits a glmnet path, and chooses the support whose
+#' cardinality is closest to `k` (preferring \eqn{\le k}). Optionally refits
+#' exact MVE weights on the chosen support. Uses the same stabilized covariance
+#' as the MIQP/exhaustive routines for consistency.
+#'
+#' @param R Numeric matrix of returns (rows = observations, cols = assets).
+#' @param k Target cardinality.
+#' @param nlambda Number of lambdas for glmnet path (ignored if `lambda` given).
+#' @param lambda_min_ratio Smallest lambda as a fraction of lambda_max.
+#' @param lambda Optional descending lambda grid.
+#' @param alpha Elastic-net mixing parameter (1 = LASSO).
+#' @param standardize Logical; whether glmnet standardizes the synthetic design.
+#' @param epsilon Ridge for covariance stabilization.
+#' @param stabilize_sigma Logical; symmetrize/ridge-stabilize sigma.
+#' @param compute_weights Logical; return weights (else zeros).
+#' @param normalize_weights Logical; post-scale weights via
+#'   `normalize_weights_cpp(mode="relative")`.
+#' @param use_refit Logical; refit exact MVE on selected support.
+#' @param do_checks Logical; validate inputs.
+#'
+#' @return List with `selection` (1-based), `weights`, `sr`, `status`, `lambda`, `alpha`.
+#' @export
+mve_lasso_search_from_returns <- function(
+    R,
+    k,
+    nlambda = 100L,
+    lambda_min_ratio = 1e-3,
+    lambda = NULL,
+    alpha = 1,
+    n_folds = 5L,
+    nadd = 80L,
+    nnested = 2L,
+    standardize = FALSE,
+    epsilon = eps_ridge_cpp(),
+    stabilize_sigma = TRUE,
+    compute_weights = TRUE,
+    normalize_weights = FALSE,
+    use_refit = FALSE,
+    do_checks = FALSE
+) {
+  if (do_checks) {
+    if (!is.matrix(R) || !is.numeric(R)) stop("R must be a numeric matrix.")
+    if (nrow(R) < 2L) stop("R must have at least 2 rows.")
+    if (ncol(R) < 1L) stop("R must have at least 1 column.")
+    if (!is.numeric(k) || k < 0 || k > ncol(R)) stop("k must be between 0 and ncol(R).")
+    if (!is.null(lambda)) {
+      if (any(!is.finite(lambda)) || any(lambda <= 0)) stop("lambda must be positive/finite.")
     }
-    fit <- do.call(glmnet::glmnet, glm_args)
-    beta_mat <- as.matrix(fit$beta)
-    lambdas <- fit$lambda
-    nnz <- colSums(beta_mat != 0)
-
-    feas <- which(nnz <= k)
-    if (length(feas) > 0) {
-      best_idx <- feas[which.max(nnz[feas])]
-      status <- if (nnz[best_idx] == k) "LASSO_PATH_EXACT_K" else "LASSO_PATH_CLOSEST"
-      best <- list(beta = beta_mat[, best_idx], support = which(beta_mat[, best_idx] != 0),
-                   lambda = lambdas[best_idx], status = status,
-                   beta_mat = beta_mat, lambdas = lambdas, nnz = nnz)
-      break
-    }
-
-    if (max(nnz) < k && is.null(lambda_override)) {
-      current_lambda_min_ratio <- current_lambda_min_ratio * 0.1
-    } else {
-      best_idx <- which.min(abs(nnz - k))
-      best <- list(beta = beta_mat[, best_idx], support = which(beta_mat[, best_idx] != 0),
-                   lambda = lambdas[best_idx], status = "LASSO_PATH_OVER_K",
-                   beta_mat = beta_mat, lambdas = lambdas, nnz = nnz)
-      break
-    }
+    if (!is.finite(epsilon)) stop("epsilon must be finite.")
   }
 
-  if (is.null(best)) {
-    stop("Failed to fit glmnet path.")
-  }
+  Tobs <- nrow(R)
+  mu <- colMeans(R)
+  sigma <- stats::cov(R)
 
-  # Densify between last <=k and first >k
-  beta_mat <- best$beta_mat; lambdas <- best$lambdas; nnz <- best$nnz
-  for (nest in seq_len(nnested)) {
-    idx_lo <- max(which(nnz <= k))
-    idx_hi <- min(which(nnz > k))
-    if (is.infinite(idx_lo) || is.infinite(idx_hi) || idx_lo >= idx_hi) break
-    lam_lo <- lambdas[idx_lo]
-    lam_hi <- lambdas[idx_hi]
-    lam_grid <- exp(seq(log(lam_hi), log(lam_lo), length.out = as.integer(nadd) + 2L))
-    lam_grid <- lam_grid[-c(1, length(lam_grid))]  # drop endpoints
-    fit_dense <- glmnet::glmnet(x = X, y = y, alpha = alpha, intercept = FALSE,
-                                standardize = standardize, lambda = lam_grid)
-    beta_dense <- as.matrix(fit_dense$beta)
-    nnz_dense <- colSums(beta_dense != 0)
-    feas_d <- which(nnz_dense <= k)
-    if (length(feas_d) > 0) {
-      bidx <- feas_d[which.max(nnz_dense[feas_d])]
-      status <- if (nnz_dense[bidx] == k) "LASSO_PATH_EXACT_K" else "LASSO_PATH_CLOSEST"
-      return(list(beta = beta_dense[, bidx],
-                  support = which(beta_dense[, bidx] != 0),
-                  lambda = lam_grid[bidx],
-                  status = status))
-    } else {
-      dist <- abs(nnz_dense - k)
-      bidx <- which.min(dist)
-      if (nnz_dense[bidx] < nnz[idx_lo]) {
-        best <- list(beta = beta_dense[, bidx],
-                     support = which(beta_dense[, bidx] != 0),
-                     lambda = lam_grid[bidx],
-                     status = "LASSO_PATH_OVER_K")
-        nnz <- nnz_dense
-        lambdas <- lam_grid
-        beta_mat <- beta_dense
-      }
-    }
-  }
-
-  list(beta = best$beta, support = best$support, lambda = best$lambda, status = best$status)
+  mve_lasso_search(mu = mu,
+                   sigma = sigma,
+                   n_obs = Tobs,
+                   k = k,
+                   nlambda = nlambda,
+                   lambda_min_ratio = lambda_min_ratio,
+                   lambda = lambda,
+                   alpha = alpha,
+                   n_folds = n_folds,
+                   nadd = nadd,
+                   nnested = nnested,
+                   standardize = standardize,
+                   epsilon = epsilon,
+                   stabilize_sigma = stabilize_sigma,
+                   compute_weights = compute_weights,
+                   normalize_weights = normalize_weights,
+                   use_refit = use_refit,
+                   do_checks = FALSE,
+                   R_cv = R)
 }

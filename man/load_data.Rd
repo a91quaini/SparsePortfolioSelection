@@ -4,18 +4,34 @@
 \alias{load_data}
 \title{Load managed-portfolio panels (daily)}
 \usage{
-load_data(type = "US", path = "data", missing = "keep")
+load_data(
+  type = "US",
+  path = "data",
+  missing = "keep",
+  frequency = c("daily", "monthly"),
+  add_mkt = FALSE,
+  shuffle = TRUE
+)
 }
 \arguments{
-\item{type}{Either \code{"US"} (default) or \code{"International"} to pick the panel.}
+\item{type}{Either \code{"US"} (default) or \code{"International"} to pick the panel (daily only).}
 
 \item{path}{Optional override for the base \code{data} directory.}
 
 \item{missing}{How to handle missing values: \code{"keep"} (default), \code{"mean"},
 \code{"median"}, or \code{"remove"} (drop rows with any NA).}
+
+\item{frequency}{Either \code{"daily"} (default) or \code{"monthly"}. Monthly loads
+all managed-portfolio return tables and drops the date column.}
+
+\item{add_mkt}{Logical; if \code{TRUE}, append the Fama-French MKT-RF column
+(second column of factors_ff5_{daily,monthly}) to the asset returns.}
+
+\item{shuffle}{Logical; if \code{TRUE} (default), randomly shuffle asset columns
+before returning.}
 }
 \value{
-A numeric matrix of returns (DATE column removed).
+A numeric matrix of returns (DATE column removed; MKT appended if requested; columns optionally shuffled).
 }
 \description{
 Convenience loader for the processed daily managed-portfolio panels shipped

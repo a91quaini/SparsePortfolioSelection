@@ -105,7 +105,7 @@ simulate_ff3 <- function(Tobs, params, do_checks = FALSE) {
 #' @param sigma_sample Sample covariance matrix.
 #' @param k Target cardinality.
 #' @param mve_search_fn Function used to pick the subset on sample moments
-#'   (e.g., `mve_exhaustive_search`, `mve_miqp_search`, `mve_lasso_search_return_based`).
+#'   (e.g., `mve_exhaustive_search`, `mve_miqp_search`, `mve_lasso_search_from_returns`).
 #' @param mve_search_fn_params List of extra args passed to `mve_search_fn`
 #'   (excluding mu/sigma/k).
 #' @param do_checks Logical; validate inputs.

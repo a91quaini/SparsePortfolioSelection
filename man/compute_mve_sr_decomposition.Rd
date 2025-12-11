@@ -28,7 +28,7 @@ compute_mve_sr_decomposition(
 \item{k}{Target cardinality.}
 
 \item{mve_search_fn}{Function used to pick the subset on sample moments
-(e.g., \code{mve_exhaustive_search}, \code{mve_miqp_search}, \code{mve_lasso_search_return_based}).}
+(e.g., \code{mve_exhaustive_search}, \code{mve_miqp_search}, \code{mve_lasso_search_from_returns}).}
 
 \item{mve_search_fn_params}{List of extra args passed to \code{mve_search_fn}
 (excluding mu/sigma/k).}

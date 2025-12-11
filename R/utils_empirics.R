@@ -6,13 +6,23 @@
 #' first `.rds` file in the chosen directory, drops the DATE column, and
 #' optionally handles missing values.
 #'
-#' @param type Either `"US"` (default) or `"International"` to pick the panel.
+#' @param type Either `"US"` (default) or `"International"` to pick the panel (daily only).
 #' @param path Optional override for the base `data` directory.
 #' @param missing How to handle missing values: `"keep"` (default), `"mean"`,
 #'   `"median"`, or `"remove"` (drop rows with any NA).
-#' @return A numeric matrix of returns (DATE column removed).
+#' @param frequency Either `"daily"` (default) or `"monthly"`. Monthly loads
+#'   all managed-portfolio return tables and drops the date column.
+#' @param add_mkt Logical; if `TRUE`, append the Fama-French MKT-RF column
+#'   (second column of factors_ff5_{daily,monthly}) to the asset returns.
+#' @param shuffle Logical; if `TRUE` (default), randomly shuffle asset columns
+#'   before returning.
+#' @return A numeric matrix of returns (DATE column removed; MKT appended if requested; columns optionally shuffled).
 #' @export
-load_data <- function(type = "US", path = "data", missing = "keep") {
+load_data <- function(type = "US", path = "data", missing = "keep",
+                      frequency = c("daily", "monthly"),
+                      add_mkt = FALSE,
+                      shuffle = TRUE) {
+  freq <- match.arg(frequency)
   if (!is.character(type) || length(type) != 1L || !(type %in% c("US", "International"))) {
     stop("type must be either 'US' or 'International'.")
   }
@@ -21,7 +31,11 @@ load_data <- function(type = "US", path = "data", missing = "keep") {
     stop("missing must be one of 'keep', 'mean', 'median', or 'remove'.")
   }
 
-  subdir <- if (type == "US") "managed_portfolios_daily" else "managed_portfolios_international_daily"
+  subdir <- if (freq == "daily") {
+    if (type == "US") "managed_portfolios_daily" else "managed_portfolios_international_daily"
+  } else {
+    "managed_portfolios_monthly"
+  }
   pkg_root <- system.file(package = "SparsePortfolioSelection")
   candidate_dirs <- c(
     file.path(path, subdir),
@@ -45,11 +59,42 @@ load_data <- function(type = "US", path = "data", missing = "keep") {
     }
     stop("No returns_*.rds files found in ", dir_path, ".")
   }
+
+  dates_ref <- NULL
   mats <- lapply(files, function(f) {
     df <- readRDS(f)
-    as.matrix(df[, -1, drop = FALSE])
+    if (is.null(dates_ref) && ncol(df) >= 1) {
+      dates_ref <<- df[[1]]
+    } else if (!is.null(dates_ref) && ncol(df) >= 1) {
+      if (!identical(dates_ref, df[[1]])) {
+        stop("Date column mismatch across returns files; cannot align.")
+      }
+    }
+    m <- as.matrix(df)
+    if (ncol(m) >= 2) m[, -1, drop = FALSE] else m
   })
+  # align by rows if possible; assume same length; if not, error
+  n_rows <- unique(vapply(mats, nrow, integer(1)))
+  if (length(n_rows) != 1) {
+    stop("Monthly returns files have differing row counts: ", paste(n_rows, collapse = ", "))
+  }
   mat <- do.call(cbind, mats)
+
+  if (add_mkt) {
+    ff_file <- file.path(dir_path, sprintf("factors_ff5_%s.rds", freq))
+    if (!file.exists(ff_file)) {
+      stop("add_mkt=TRUE but factors file not found: ", ff_file)
+    }
+    ff <- readRDS(ff_file)
+    if (ncol(ff) < 2) stop("factors file missing MKT column (needs at least two columns).")
+    if (is.null(dates_ref)) stop("add_mkt=TRUE but no date column available to align returns.")
+    idx <- match(dates_ref, ff[[1]])
+    if (anyNA(idx)) {
+      stop("Date mismatch between returns and factors_ff5_", freq, " (cannot align MKT).")
+    }
+    mkt_col <- as.numeric(ff[[2]][idx])
+    mat <- cbind(mat, mkt_col)
+  }
 
   if (miss_opt == "remove") {
     keep <- stats::complete.cases(mat)
@@ -62,6 +107,10 @@ load_data <- function(type = "US", path = "data", missing = "keep") {
         mat[idx, j] <- filler
       }
     }
+  }
+
+  if (shuffle) {
+    mat <- mat[, sample.int(ncol(mat)), drop = FALSE]
   }
 
   mat
