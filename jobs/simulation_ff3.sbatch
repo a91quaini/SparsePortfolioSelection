@@ -2,8 +2,8 @@
 #SBATCH --job-name=sim_ff3
 #SBATCH --partition=compute
 #SBATCH --time=12:00:00
-#SBATCH --cpus-per-task=12
-#SBATCH --mem=24G
+#SBATCH --cpus-per-task=192
+#SBATCH --mem=336G
 #SBATCH --output=logs/sim_ff3_%j.out
 #SBATCH --error=logs/sim_ff3_%j.err
 

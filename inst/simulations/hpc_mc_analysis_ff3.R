@@ -6,11 +6,11 @@
 #   Rscript inst/simulations/hpc_simulation_ff3_mc.R
 #
 # Recommended via SLURM:
-#   #SBATCH --cpus-per-task=12
-#   export OMP_NUM_THREADS=12 OPENBLAS_NUM_THREADS=12 MKL_NUM_THREADS=12 BLIS_NUM_THREADS=12
+#   #SBATCH --cpus-per-task=192
+#   export OMP_NUM_THREADS=192 OPENBLAS_NUM_THREADS=192 MKL_NUM_THREADS=192 BLIS_NUM_THREADS=192
 #   export SPS_PARALLEL=false            # this script is sequential by default
 #   export SPS_METHOD=miqp               # miqp or lasso
-#   export SPS_GUROBI_THREADS=12         # if sequential MIQP; set 1 if you parallelize MC yourself
+#   export SPS_GUROBI_THREADS=192        # if sequential MIQP; set 1 if you parallelize MC yourself
 #   Rscript inst/simulations/hpc_simulation_ff3_mc.R
 
 # ------------------------------ helpers -------------------------------------
@@ -71,8 +71,8 @@ log_msg("Working directory set to package root: ", pkg_root)
 
 # ------------------------------ thread control ------------------------------
 
-Nn <- as_int_env("SLURM_CPUS_PER_TASK", default = 12L)
-if (is.na(Nn) || Nn < 1L) Nn <- 12L
+Nn <- as_int_env("SLURM_CPUS_PER_TASK", default = 192L)
+if (is.na(Nn) || Nn < 1L) Nn <- 192L
 
 Sys.setenv(
   OMP_NUM_THREADS       = Nn,
