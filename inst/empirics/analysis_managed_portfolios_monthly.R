@@ -55,11 +55,13 @@ FIG_DIR <- file.path("inst", "empirics", "figures", "managed_portfolios_monthly"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 
+# Fix RNG before any shuffling inside load_data
+if (!is.null(RNG_SEED)) set.seed(RNG_SEED)
+
 R <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly")
 T_full <- nrow(R); N_full <- ncol(R)
 
 # Select a subset of assets for speed/reproducibility
-if (!is.null(RNG_SEED)) set.seed(RNG_SEED)
 N <- min(N_ASSETS, N_full)
 asset_idx <- sort(sample.int(N_full, N))
 R <- R[, asset_idx, drop = FALSE]
