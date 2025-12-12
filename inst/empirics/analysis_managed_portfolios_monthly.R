@@ -32,16 +32,16 @@ library(SparsePortfolioSelection)
 # Configuration
 PANEL_TYPE <- "US"      # ignored for monthly frequency
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 200         # subset of assets to use: total = 353
+N_ASSETS <- 250         # subset of assets to use: total = 353
 RNG_SEED <- 12345
-W_IN <- 240             # in-sample length (months): [240 360 480]
+W_IN <- 480             # in-sample length (months): [240 360 480]
 W_OUT <- 1             # OOS block length (months): [1]
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
 METHOD <- "lasso"        # "lasso" | "elnet" | "miqp"
-REFIT <- TRUE
+REFIT <- FALSE
 PARALLEL <- TRUE
 
 # Decide filename/label stems (append _refit if refit enabled)
