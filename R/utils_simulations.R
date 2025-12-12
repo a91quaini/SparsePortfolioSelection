@@ -296,14 +296,12 @@ plot_mve_sr_decomposition <- function(results, save = FALSE) {
 
   allocation_risk <- pop_sr - sel_mean
   selection_risk <- sel_mean - est_mean
-  df_risk <- data.frame(
-    k = k_grid,
-    Selection = selection_risk,
-    Allocation = allocation_risk
+  df_risk_long <- data.frame(
+    k = rep(k_grid, times = 2),
+    component = factor(rep(c("Selection", "Allocation"), each = length(k_grid)),
+                       levels = c("Selection", "Allocation")),
+    value = c(selection_risk, allocation_risk)
   )
-  df_risk_long <- tidyr::pivot_longer(df_risk, cols = c("Selection", "Allocation"),
-                                      names_to = "component", values_to = "value")
-  df_risk_long$component <- factor(df_risk_long$component, levels = c("Selection", "Allocation"))
 
   risk_plot <- ggplot2::ggplot(df_risk_long, ggplot2::aes(x = k, y = value, fill = component)) +
     ggplot2::geom_area(position = "stack", alpha = 0.8) +
