@@ -4,6 +4,7 @@
 ## ---- thread control: must be at the very top ------------------------------
 # Nn = 1L
 Nn = 12L
+Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
     RhpcBLASctl::blas_set_num_threads(Nn)
@@ -128,9 +129,8 @@ compute_weights_fn <- if (METHOD == "miqp") {
 message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
 # Optional parallel run: set PARALLEL <- TRUE to enable
-n_threads = 12
 if (PARALLEL) {
-  n_cores <- max(1L, parallel::detectCores(logical = TRUE) - 1L)
+  n_cores <- Nn
   sr_vec <- run_oos_evaluation_parallel(
     R = R,
     size_w_in = W_IN,
