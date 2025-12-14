@@ -33,7 +33,7 @@ library(SparsePortfolioSelection)
 # Configuration: 420 observations
 PANEL_TYPE <- "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 112         # subset of assets to use: total = 112
+N_ASSETS <- 200         # subset of assets to use: total = 112
 RNG_SEED <- 12345
 W_IN_GRID <- c(90L, 120L, 240L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
@@ -67,7 +67,7 @@ T_full <- nrow(R_all); N_full <- ncol(R_all)
 
 # Select a subset of assets for speed/reproducibility
 N <- min(N_ASSETS, N_full)
-R_all <- R_all[, asset_idx, drop = FALSE]
+R_all <- R_all[, 1:N, drop = FALSE]
 
 k_grid <- NULL  # defined per run once N is known
 
