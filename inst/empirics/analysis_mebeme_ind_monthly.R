@@ -31,15 +31,15 @@ Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
 library(SparsePortfolioSelection)
 
 # Configuration: 658 observations
-PANEL_TYPE <- "mebeme_ind"
+PANEL_TYPE <- "mebeme"
 MISSINGS <- "median"    # how to treat missing values
 N_ASSETS <- 200         # subset of assets to use: total = 152 (100 + 49 + 3)
 RNG_SEED <- 12345
-W_IN_GRID <- c(240L, 480L)  # in-sample lengths (months)
+W_IN_GRID <- c(360L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
-ADD_FACTORS <- FALSE    # append FF3 (MKT, SMB, HML)
+ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
