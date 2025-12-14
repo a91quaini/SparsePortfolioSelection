@@ -5,7 +5,17 @@
 library(SparsePortfolioSelection)
 
 set.seed(123)
-n_cores <- 6L
+serial_mode <- identical(Sys.getenv("SPS_SERIAL"), "1")
+Nn <- if (serial_mode) 1L else 6L
+n_cores <- if (serial_mode) 1L else max(1L, Nn - 1L)
+if (serial_mode) {
+  Sys.setenv(
+    OMP_NUM_THREADS = 1L,
+    OPENBLAS_NUM_THREADS = 1L,
+    MKL_NUM_THREADS = 1L,
+    BLIS_NUM_THREADS = 1L
+  )
+}
 
 # Simulation parameters
 n_assets <- 100
@@ -37,7 +47,7 @@ miqp_sample <- list(
   fmax = 0.25,
   mipgap = 1e-4,
   time_limit = 200,
-  threads = 0,
+  threads = Nn,
   compute_weights = TRUE,
   normalize_weights = FALSE,
   verbose = FALSE
@@ -66,7 +76,7 @@ miqp_pop <- list(
   expand_tol = 1e-4,
   mipgap = 5e-6,
   time_limit = 500,
-  threads = 0,
+  threads = Nn,
   compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = FALSE,
@@ -180,7 +190,11 @@ for (n_obs in n_obs_grid) {
     list(est = est_vec, sel = sel_vec)
   }
 
-  res_list <- parallel::mclapply(seq_len(n_MC), run_one, mc.cores = n_cores)
+  res_list <- if (n_cores == 1L) {
+    lapply(seq_len(n_MC), run_one)
+  } else {
+    parallel::mclapply(seq_len(n_MC), run_one, mc.cores = n_cores)
+  }
 
   est_terms <- t(vapply(res_list, `[[`, numeric(length(k_grid)), "est"))
   sel_terms <- t(vapply(res_list, `[[`, numeric(length(k_grid)), "sel"))
