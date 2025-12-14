@@ -5,17 +5,17 @@
 library(SparsePortfolioSelection)
 
 set.seed(123)
-serial_mode <- identical(Sys.getenv("SPS_SERIAL"), "1")
-Nn <- if (serial_mode) 1L else 6L
-n_cores <- if (serial_mode) 1L else max(1L, Nn - 1L)
-if (serial_mode) {
-  Sys.setenv(
-    OMP_NUM_THREADS = 1L,
-    OPENBLAS_NUM_THREADS = 1L,
-    MKL_NUM_THREADS = 1L,
-    BLIS_NUM_THREADS = 1L
-  )
-}
+# HPC-friendly defaults: limit BLAS/OMP to 1 and choose worker count via SPS_CORES (default 64)
+Sys.setenv(
+  OMP_NUM_THREADS = 1L,
+  OPENBLAS_NUM_THREADS = 1L,
+  MKL_NUM_THREADS = 1L,
+  BLIS_NUM_THREADS = 1L
+)
+Nn <- as.integer(Sys.getenv("SPS_CORES", "64"))
+if (is.na(Nn) || Nn < 1L) Nn <- 64L
+det_cores <- parallel::detectCores(logical = TRUE)
+n_cores <- max(1L, min(Nn, if (is.na(det_cores)) Nn else det_cores))
 
 # Simulation parameters
 n_assets <- 100
@@ -47,7 +47,7 @@ miqp_sample <- list(
   fmax = 0.25,
   mipgap = 1e-4,
   time_limit = 200,
-  threads = Nn,
+  threads = max(1L, min(8L, n_cores)),
   compute_weights = TRUE,
   normalize_weights = FALSE,
   verbose = FALSE
@@ -76,7 +76,7 @@ miqp_pop <- list(
   expand_tol = 1e-4,
   mipgap = 5e-6,
   time_limit = 500,
-  threads = Nn,
+  threads = max(1L, min(8L, n_cores)),
   compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = FALSE,
