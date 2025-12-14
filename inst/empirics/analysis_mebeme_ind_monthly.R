@@ -24,21 +24,21 @@ Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
 #   }
 # })
 
-# Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
-MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
-if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
+# # Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
+# MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
+# if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
 
 library(SparsePortfolioSelection)
 
 # Configuration: 658 observations
-PANEL_TYPE <- "mebeme_ind"
+PANEL_TYPE <- "mebeme"
 MISSINGS <- "median"    # how to treat missing values
 N_ASSETS <- 200         # subset of assets to use: total = 152 (100 + 49 + 3)
 RNG_SEED <- 12345
 W_IN_GRID <- c(120L, 240L, 480L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
-ADD_MKT <- TRUE         # append MKT-RF
+ADD_MKT <- FALSE         # append MKT-RF
 ADD_FACTORS <- FALSE    # append FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
@@ -77,37 +77,37 @@ if (METHOD == "lasso") {
   alpha_grid = 1.00
 }
 lasso_params <- list(
-  nlambda = 400L,
+  nlambda = 300L,
   lambda_min_ratio = 1e-4,
   alpha = alpha_grid,
   n_folds = 5L,
   nadd = 100L,
   nnested = 4L,
   standardize = FALSE,
-  stabilize_sigma = TRUE,
+  stabilize_sigma = FALSE,
   compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = REFIT
 )
 
-miqp_params <- list(
-  exactly_k = TRUE,
-  m = 1L,
-  gamma = 1.0,
-  fmin = -0.25,
-  fmax = 0.25,
-  expand_rounds = 10L,
-  expand_factor = 3.0,
-  expand_tol = 1e-2,
-  mipgap = 1e-4,
-  time_limit = 100,
-  threads = MIQP_THREADS,
-  compute_weights = TRUE,
-  normalize_weights = FALSE,
-  use_refit = REFIT,
-  verbose = FALSE,
-  stabilize_sigma = TRUE
-)
+# miqp_params <- list(
+#   exactly_k = TRUE,
+#   m = 1L,
+#   gamma = 1.0,
+#   fmin = -0.25,
+#   fmax = 0.25,
+#   expand_rounds = 10L,
+#   expand_factor = 3.0,
+#   expand_tol = 1e-2,
+#   mipgap = 1e-4,
+#   time_limit = 100,
+#   threads = MIQP_THREADS,
+#   compute_weights = TRUE,
+#   normalize_weights = FALSE,
+#   use_refit = REFIT,
+#   verbose = FALSE,
+#   stabilize_sigma = TRUE
+# )
 
 compute_weights_fn <- if (METHOD == "miqp") {
   function(Rin, k) {
