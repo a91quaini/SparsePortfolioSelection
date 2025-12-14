@@ -33,9 +33,9 @@ library(SparsePortfolioSelection)
 # Configuration: 636 observations
 PANEL_TYPE <- "US"      # ignored for monthly frequency
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 400         # subset of assets to use: total = 355
+N_ASSETS <- 355         # subset of assets to use: total = 355
 RNG_SEED <- 12345
-W_IN_GRID <- c(240L, 360L, 480L)  # in-sample lengths (months)
+W_IN_GRID <- c(480L)  # in-sample lengths (months)
 W_OUT <- 1             # OOS block length (months): [1]
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
