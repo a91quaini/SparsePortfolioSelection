@@ -24,9 +24,9 @@ suppressPackageStartupMessages({
   }
 })
 
-# Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
-MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
-if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
+# # Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
+# MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
+# if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
 
 library(SparsePortfolioSelection)
 
@@ -43,8 +43,8 @@ ADD_FACTORS <- FALSE    # append region-specific FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
-METHOD <- "miqp"        # "lasso" | "elnet" | "miqp"
-REFIT <- TRUE
+METHOD <- "lasso"        # "lasso" | "elnet" | "miqp"
+REFIT <- FALSE
 PARALLEL <- TRUE
 
 # Decide filename/label stems (append _refit if refit enabled)
@@ -77,12 +77,12 @@ if (METHOD == "lasso") {
   alpha_grid = 1.00
 }
 lasso_params <- list(
-  nlambda = 100L,
-  lambda_min_ratio = 1e-3,
+  nlambda = 400L,
+  lambda_min_ratio = 1e-4,
   alpha = alpha_grid,
   n_folds = 5L,
-  nadd = 80L,
-  nnested = 3L,
+  nadd = 100L,
+  nnested = 4L,
   standardize = FALSE,
   stabilize_sigma = TRUE,
   compute_weights = TRUE,
