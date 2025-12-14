@@ -3,7 +3,7 @@
 
 ## ---- thread control: must be at the very top ------------------------------
 # Nn = 1L
-Nn = 6L
+Nn = 96L
 Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
 # suppressPackageStartupMessages({
 #   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
