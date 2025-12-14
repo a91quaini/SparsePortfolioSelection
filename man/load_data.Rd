@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_empirics.R
 \name{load_data}
 \alias{load_data}
-\title{Load managed-portfolio panels (daily)}
+\title{Load managed-portfolio panels (daily or monthly)}
 \usage{
 load_data(
   type = "US",
@@ -14,7 +14,7 @@ load_data(
 )
 }
 \arguments{
-\item{type}{Either \code{"US"} (default) or \code{"International"} to pick the panel (daily only).}
+\item{type}{Either \code{"US"} (default), \code{"International"}, or \code{"mebeme_ind"} to pick the panel.}
 
 \item{path}{Optional override for the base \code{data} directory.}
 
@@ -34,9 +34,8 @@ before returning.}
 A numeric matrix of returns (DATE column removed; MKT appended if requested; columns optionally shuffled).
 }
 \description{
-Convenience loader for the processed daily managed-portfolio panels shipped
-in \code{data/managed_portfolios_daily} (US) or
-\code{data/managed_portfolios_international_daily} (International). It reads the
-first \code{.rds} file in the chosen directory, drops the DATE column, and
-optionally handles missing values.
+Convenience loader for the processed daily or monthly managed-portfolio
+panels shipped in \verb{data/managed_portfolios_*}. It reads all \code{.rds} files in
+the chosen directory, drops the DATE column, and optionally handles missing
+values.
 }

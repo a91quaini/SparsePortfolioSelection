@@ -33,7 +33,7 @@ library(SparsePortfolioSelection)
 # Configuration
 PANEL_TYPE <- "US"      # ignored for monthly frequency
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 250         # subset of assets to use: total = 353
+N_ASSETS <- 100         # subset of assets to use: total = 353
 RNG_SEED <- 12345
 W_IN <- 480             # in-sample length (months): [240 360 480]
 W_OUT <- 1             # OOS block length (months): [1]

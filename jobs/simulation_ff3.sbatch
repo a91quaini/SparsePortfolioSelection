@@ -1,7 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=sim_ff3
-#SBATCH --partition=compute
-#SBATCH --time=12:00:00
+#SBATCH -J myfirstjob
+#SBATCH -p genoa
+#SBATCH -t 1:30:00
+#SBATCH -N 1
 #SBATCH --cpus-per-task=192
 #SBATCH --mem=336G
 #SBATCH --output=logs/sim_ff3_%j.out

@@ -1,12 +1,11 @@
-#' Load managed-portfolio panels (daily)
+#' Load managed-portfolio panels (daily or monthly)
 #'
-#' Convenience loader for the processed daily managed-portfolio panels shipped
-#' in `data/managed_portfolios_daily` (US) or
-#' `data/managed_portfolios_international_daily` (International). It reads the
-#' first `.rds` file in the chosen directory, drops the DATE column, and
-#' optionally handles missing values.
+#' Convenience loader for the processed daily or monthly managed-portfolio
+#' panels shipped in `data/managed_portfolios_*`. It reads all `.rds` files in
+#' the chosen directory, drops the DATE column, and optionally handles missing
+#' values.
 #'
-#' @param type Either `"US"` (default) or `"International"` to pick the panel (daily only).
+#' @param type Either `"US"` (default), `"International"`, or `"mebeme_ind"` to pick the panel.
 #' @param path Optional override for the base `data` directory.
 #' @param missing How to handle missing values: `"keep"` (default), `"mean"`,
 #'   `"median"`, or `"remove"` (drop rows with any NA).
@@ -23,19 +22,20 @@ load_data <- function(type = "US", path = "data", missing = "keep",
                       add_mkt = FALSE,
                       shuffle = TRUE) {
   freq <- match.arg(frequency)
-  if (!is.character(type) || length(type) != 1L || !(type %in% c("US", "International"))) {
-    stop("type must be either 'US' or 'International'.")
+  if (!is.character(type) || length(type) != 1L || !(type %in% c("US", "International", "mebeme_ind"))) {
+    stop("type must be one of 'US', 'International', or 'mebeme_ind'.")
   }
   miss_opt <- tolower(missing)
   if (!miss_opt %in% c("keep", "mean", "median", "remove")) {
     stop("missing must be one of 'keep', 'mean', 'median', or 'remove'.")
   }
 
-  subdir <- if (freq == "daily") {
-    if (type == "US") "managed_portfolios_daily" else "managed_portfolios_international_daily"
-  } else {
-    "managed_portfolios_monthly"
+  if (type == "mebeme_ind" && freq != "monthly") {
+    stop("type='mebeme_ind' is only available for monthly frequency.")
   }
+  subdir <- switch(freq,
+                   daily   = if (type == "US") "managed_portfolios_daily" else "managed_portfolios_international_daily",
+                   monthly = if (type == "US") "managed_portfolios_monthly" else if (type == "International") "managed_portfolios_international_monthly" else "mebeme_ind_monthly")
   pkg_root <- system.file(package = "SparsePortfolioSelection")
   candidate_dirs <- c(
     file.path(path, subdir),
@@ -53,11 +53,30 @@ load_data <- function(type = "US", path = "data", missing = "keep",
   }
 
   files <- list.files(dir_path, pattern = "^returns_.*\\.rds$", full.names = TRUE)
+  if (type == "mebeme_ind") {
+    # Use both ME×BE/ME 100 and 49 industry portfolios
+    keep_basenames <- c(
+      "returns_mebeme100_monthly.rds",
+      "returns_ind49_monthly.rds"
+    )
+    files <- files[basename(files) %in% keep_basenames]
+  }
+  if (type == "International" && freq == "monthly") {
+    # Restrict to the 25 ME×BE/ME portfolios per region (Developed Markets: 4 regions × 25 = 100 assets)
+    keep_basenames <- c(
+      "returns_apxj_mebeme25_int_monthly.rds",
+      "returns_eu_mebeme25_int_monthly.rds",
+      "returns_jp_mebeme25_int_monthly.rds",
+      "returns_na_mebeme25_int_monthly.rds"
+    )
+    files <- files[basename(files) %in% keep_basenames]
+  }
   if (length(files) == 0) {
     if (identical(Sys.getenv("TESTTHAT"), "true")) {
       return(matrix(0, nrow = 10, ncol = 5))
     }
-    stop("No returns_*.rds files found in ", dir_path, ".")
+    stop("No returns_*.rds files found in ", dir_path,
+         if (type == "International" && freq == "monthly") " after filtering to ME×BE/ME portfolios." else ".")
   }
 
   dates_ref <- NULL
@@ -81,19 +100,23 @@ load_data <- function(type = "US", path = "data", missing = "keep",
   mat <- do.call(cbind, mats)
 
   if (add_mkt) {
-    ff_file <- file.path(dir_path, sprintf("factors_ff5_%s.rds", freq))
-    if (!file.exists(ff_file)) {
-      stop("add_mkt=TRUE but factors file not found: ", ff_file)
+    if (type == "mebeme_ind") {
+      stop("add_mkt=TRUE is not supported for type='mebeme_ind' (no MKT factor available).")
+    } else {
+      ff_file <- file.path(dir_path, sprintf("factors_ff5_%s.rds", freq))
+      if (!file.exists(ff_file)) {
+        stop("add_mkt=TRUE but factors file not found: ", ff_file)
+      }
+      ff <- readRDS(ff_file)
+      if (ncol(ff) < 2) stop("factors file missing MKT column (needs at least two columns).")
+      if (is.null(dates_ref)) stop("add_mkt=TRUE but no date column available to align returns.")
+      idx <- match(dates_ref, ff[[1]])
+      if (anyNA(idx)) {
+        stop("Date mismatch between returns and factors_ff5_", freq, " (cannot align MKT).")
+      }
+      mkt_col <- as.numeric(ff[[2]][idx])
+      mat <- cbind(mat, mkt_col)
     }
-    ff <- readRDS(ff_file)
-    if (ncol(ff) < 2) stop("factors file missing MKT column (needs at least two columns).")
-    if (is.null(dates_ref)) stop("add_mkt=TRUE but no date column available to align returns.")
-    idx <- match(dates_ref, ff[[1]])
-    if (anyNA(idx)) {
-      stop("Date mismatch between returns and factors_ff5_", freq, " (cannot align MKT).")
-    }
-    mkt_col <- as.numeric(ff[[2]][idx])
-    mat <- cbind(mat, mkt_col)
   }
 
   if (miss_opt == "remove") {

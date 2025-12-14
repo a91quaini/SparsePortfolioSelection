@@ -157,6 +157,29 @@ returns_na_meinv25_int_daily <- NULL
 returns_na_meop25_int_daily <- NULL
 returns_na_meprior25020_int_daily <- NULL
 
+# International panels (monthly, decimals, with DATE column)
+#' @format A data frame with columns:
+#' \describe{
+#'   \item{DATE}{Integer date in YYYYMM format}
+#'   \item{Asset}{Returns}
+#' }
+returns_apxj_mebeme25_int_monthly <- NULL
+returns_apxj_meinv25_int_monthly <- NULL
+returns_apxj_meop25_int_monthly <- NULL
+returns_apxj_meprior122_int_monthly <- NULL
+returns_eu_mebeme25_int_monthly <- NULL
+returns_eu_meinv25_int_monthly <- NULL
+returns_eu_meop25_int_monthly <- NULL
+returns_eu_meprior122_int_monthly <- NULL
+returns_jp_mebeme25_int_monthly <- NULL
+returns_jp_meinv25_int_monthly <- NULL
+returns_jp_meop25_int_monthly <- NULL
+returns_jp_meprior122_int_monthly <- NULL
+returns_na_mebeme25_int_monthly <- NULL
+returns_na_meinv25_int_monthly <- NULL
+returns_na_meop25_int_monthly <- NULL
+returns_na_meprior122_int_monthly <- NULL
+
 # Monthly excess returns (US, decimals)
 #' @format A data frame with columns:
 #' \describe{
