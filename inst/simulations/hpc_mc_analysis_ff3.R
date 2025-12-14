@@ -31,18 +31,32 @@ params <- calibrate_ff3(n_assets)
 mu_pop <- params$mu_true
 sigma_pop <- params$sigma_true
 
-# 4) Population SR for each k (uses first n_obs value; SR does not change with n_obs)
-pop_sr <- compute_population_mve_sr(
-  mu_pop = mu_pop,
-  sigma_pop = sigma_pop,
-  k_grid = k_grid,
+# 4) Population SR via LASSO only (uses first n_obs value for design; SR does not change with n_obs)
+lasso_pop <- modifyList(lasso_base, list(
   n_obs = n_obs_grid[[1]],
-  lasso_nlambda = 300L,
-  lasso_lambda_min_ratio = 1e-4,
-  miqp_time_limit = 0,   # unused when search_method = "lasso"
-  miqp_mipgap = 0,       # unused when search_method = "lasso"
-  verbose = FALSE
-)
+  lambda_min_ratio = 1e-4,  # denser path for population calc
+  nadd = 50L
+))
+pop_sr <- numeric(length(k_grid))
+for (i in seq_along(k_grid)) {
+  k <- k_grid[i]
+  res <- mve_lasso_search(
+    mu = mu_pop,
+    sigma = sigma_pop,
+    k = k,
+    n_obs = lasso_pop$n_obs,
+    nlambda = lasso_pop$nlambda,
+    lambda_min_ratio = lasso_pop$lambda_min_ratio,
+    alpha = lasso_pop$alpha,
+    nadd = lasso_pop$nadd,
+    nnested = lasso_pop$nnested,
+    standardize = lasso_pop$standardize,
+    compute_weights = TRUE,
+    normalize_weights = FALSE,
+    use_refit = lasso_pop$use_refit
+  )
+  pop_sr[i] <- as.numeric(res$sr)
+}
 
 dir.create("inst/simulations/results", recursive = TRUE, showWarnings = FALSE)
 
