@@ -35,7 +35,7 @@ PANEL_TYPE <- "mebeme_ind"
 MISSINGS <- "median"    # how to treat missing values
 N_ASSETS <- 150         # subset of assets to use: total = 149 (100 + 49)
 RNG_SEED <- 12345
-W_IN_GRID <- c(120L, 240L, 360L, 480L, 600L)  # in-sample lengths (months)
+W_IN_GRID <- c(60L, 120L, 240L, 480L, 960L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 K_MIN <- 3

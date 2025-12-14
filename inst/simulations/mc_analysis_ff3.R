@@ -8,19 +8,19 @@ n_cores <- max(1L, Nn - 1L)
 
 # 1) Simulation parameters
 n_assets <- 100              # [25, 50, 100]
-n_obs_grid <- c(120L, 480L)  # allow multiple T (population SR does not depend on T)
+n_obs_grid <- c(120L, 240L, 480L, 960L)  # allow multiple T (population SR does not depend on T)
 k_grid <- 2:(n_assets-1)
 n_MC <- 1000                  # 200
 search_method <- "lasso"     # set to "lasso" or "miqp"
 
 # 2) Search function parameters (static across n_obs unless n_obs is needed)
 miqp_params <- list(
-  exactly_k = TRUE,
+  exactly_k = FALSE,
   gamma = 1.0,
-  fmin = 0,
+  fmin = -0.25,
   fmax = 0.25,
   mipgap = 1e-4,
-  time_limit = 100,
+  time_limit = 150,
   threads = 0,
   compute_weights = TRUE,
   normalize_weights = FALSE,
@@ -38,10 +38,10 @@ pop_sr <- compute_population_mve_sr(
   sigma_pop = sigma_pop,
   k_grid = k_grid,
   n_obs = n_obs_grid[[1]],
-  lasso_nlambda = 300L,
-  lasso_lambda_min_ratio = 1e-4,
-  miqp_time_limit = 200,
-  miqp_mipgap = 1e-5,
+  lasso_nlambda = 400L,
+  lasso_lambda_min_ratio = 1e-3,
+  miqp_time_limit = 500,
+  miqp_mipgap = 1e-6,
   verbose = FALSE
 )
 
