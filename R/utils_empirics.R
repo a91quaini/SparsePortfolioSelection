@@ -5,14 +5,18 @@
 #' the chosen directory, drops the DATE column, and optionally handles missing
 #' values.
 #'
-#' @param type Either `"US"` (default), `"International"`, or `"mebeme_ind"` to pick the panel.
+#' @param type Either `"US"` (default), `"International"`, `"mebeme_ind"`, or `"mebeme"` to pick the panel.
 #' @param path Optional override for the base `data` directory.
 #' @param missing How to handle missing values: `"keep"` (default), `"mean"`,
 #'   `"median"`, or `"remove"` (drop rows with any NA).
 #' @param frequency Either `"daily"` (default) or `"monthly"`. Monthly loads
 #'   all managed-portfolio return tables and drops the date column.
-#' @param add_mkt Logical; if `TRUE`, append the Fama-French MKT-RF column
-#'   (second column of factors_ff5_{daily,monthly}) to the asset returns.
+#' @param add_mkt Logical; if `TRUE`, append MKT-RF columns. For US panels this
+#'   comes from factors_ff5; for international monthly it appends MKT for each
+#'   region; for `mebeme`/`mebeme_ind` it comes from factors_ff5_monthly.
+#' @param add_factors Logical; if `TRUE`, append the first three factors (MKT,
+#'   SMB, HML). For international monthly, appends the three factors for each
+#'   region. For `mebeme`/`mebeme_ind`, monthly only.
 #' @param shuffle Logical; if `TRUE` (default), randomly shuffle asset columns
 #'   before returning.
 #' @return A numeric matrix of returns (DATE column removed; MKT appended if requested; columns optionally shuffled).
@@ -20,18 +24,19 @@
 load_data <- function(type = "US", path = "data", missing = "keep",
                       frequency = c("daily", "monthly"),
                       add_mkt = FALSE,
+                      add_factors = FALSE,
                       shuffle = TRUE) {
   freq <- match.arg(frequency)
-  if (!is.character(type) || length(type) != 1L || !(type %in% c("US", "International", "mebeme_ind"))) {
-    stop("type must be one of 'US', 'International', or 'mebeme_ind'.")
+  if (!is.character(type) || length(type) != 1L || !(type %in% c("US", "International", "mebeme_ind", "mebeme"))) {
+    stop("type must be one of 'US', 'International', 'mebeme_ind', or 'mebeme'.")
   }
   miss_opt <- tolower(missing)
   if (!miss_opt %in% c("keep", "mean", "median", "remove")) {
     stop("missing must be one of 'keep', 'mean', 'median', or 'remove'.")
   }
 
-  if (type == "mebeme_ind" && freq != "monthly") {
-    stop("type='mebeme_ind' is only available for monthly frequency.")
+  if ((type == "mebeme_ind" || type == "mebeme") && freq != "monthly") {
+    stop("type='mebeme_ind' and 'mebeme' are only available for monthly frequency.")
   }
   subdir <- switch(freq,
                    daily   = if (type == "US") "managed_portfolios_daily" else "managed_portfolios_international_daily",
@@ -53,12 +58,12 @@ load_data <- function(type = "US", path = "data", missing = "keep",
   }
 
   files <- list.files(dir_path, pattern = "^returns_.*\\.rds$", full.names = TRUE)
-  if (type == "mebeme_ind") {
-    # Use both ME×BE/ME 100 and 49 industry portfolios
-    keep_basenames <- c(
-      "returns_mebeme100_monthly.rds",
-      "returns_ind49_monthly.rds"
-    )
+  if (type == "mebeme_ind" || type == "mebeme") {
+    keep_basenames <- if (type == "mebeme_ind") {
+      c("returns_mebeme100_monthly.rds", "returns_ind49_monthly.rds")
+    } else {
+      c("returns_mebeme100_monthly.rds")
+    }
     files <- files[basename(files) %in% keep_basenames]
   }
   if (type == "International" && freq == "monthly") {
@@ -99,23 +104,54 @@ load_data <- function(type = "US", path = "data", missing = "keep",
   }
   mat <- do.call(cbind, mats)
 
-  if (add_mkt) {
-    if (type == "mebeme_ind") {
-      stop("add_mkt=TRUE is not supported for type='mebeme_ind' (no MKT factor available).")
+  if (add_mkt || add_factors) {
+    if (type == "International" && freq == "monthly") {
+      factor_files <- c(
+        apxj   = "ff3_factors_monthly_asia_pacific_ex_japan.rds",
+        europe = "ff3_factors_monthly_europe.rds",
+        japan  = "ff3_factors_monthly_japan.rds",
+        na     = "ff3_factors_monthly_north_america.rds"
+      )
+      cols_to_add <- list()
+      for (region in names(factor_files)) {
+        fpath <- file.path(dir_path, factor_files[[region]])
+        if (!file.exists(fpath)) {
+          warning("Skipping missing factor file: ", basename(fpath))
+          next
+        }
+        ff <- readRDS(fpath)
+        if (ncol(ff) < 4) stop("Factor file missing FF3 columns: ", fpath)
+        idx <- match(dates_ref, ff[[1]])
+        if (anyNA(idx)) stop("Date mismatch between returns and ", basename(fpath))
+        if (add_factors) {
+          cols_to_add[[paste0(region, "_MKT")]] <- as.numeric(ff[[2]][idx])
+          cols_to_add[[paste0(region, "_SMB")]] <- as.numeric(ff[[3]][idx])
+          cols_to_add[[paste0(region, "_HML")]] <- as.numeric(ff[[4]][idx])
+        } else if (add_mkt) {
+          cols_to_add[[paste0(region, "_MKT")]] <- as.numeric(ff[[2]][idx])
+        }
+      }
+      if (length(cols_to_add)) {
+        mat <- cbind(mat, as.data.frame(cols_to_add, check.names = FALSE))
+      }
     } else {
       ff_file <- file.path(dir_path, sprintf("factors_ff5_%s.rds", freq))
-      if (!file.exists(ff_file)) {
-        stop("add_mkt=TRUE but factors file not found: ", ff_file)
-      }
+      if (!file.exists(ff_file)) stop("factors file not found: ", ff_file)
       ff <- readRDS(ff_file)
-      if (ncol(ff) < 2) stop("factors file missing MKT column (needs at least two columns).")
-      if (is.null(dates_ref)) stop("add_mkt=TRUE but no date column available to align returns.")
+      if (ncol(ff) < 2) stop("factors file missing MKT column.")
+      if (add_factors && ncol(ff) < 4) stop("factors file missing FF3 columns.")
+      if (is.null(dates_ref)) stop("add_mkt/add_factors requested but no date column to align.")
       idx <- match(dates_ref, ff[[1]])
-      if (anyNA(idx)) {
-        stop("Date mismatch between returns and factors_ff5_", freq, " (cannot align MKT).")
+      if (anyNA(idx)) stop("Date mismatch between returns and factors_ff5_", freq, ".")
+
+      if (add_factors) {
+        ff3 <- as.data.frame(ff[idx, 2:4, drop = FALSE])
+        names(ff3) <- c("MKT", "SMB", "HML")
+        mat <- cbind(mat, ff3)
+      } else if (add_mkt) {
+        mkt_col <- as.numeric(ff[[2]][idx])
+        mat <- cbind(mat, mkt_col)
       }
-      mkt_col <- as.numeric(ff[[2]][idx])
-      mat <- cbind(mat, mkt_col)
     }
   }
 

@@ -30,14 +30,16 @@ if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
 
 library(SparsePortfolioSelection)
 
-# Configuration
+# Configuration: 658 observations
 PANEL_TYPE <- "mebeme_ind"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 150         # subset of assets to use: total = 149 (100 + 49)
+N_ASSETS <- 152         # subset of assets to use: total = 152 (100 + 49 + 3)
 RNG_SEED <- 12345
-W_IN_GRID <- c(60L, 120L, 240L, 480L, 960L)  # in-sample lengths (months)
+W_IN_GRID <- c(120L, 240L, 480L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
+ADD_MKT <- TRUE         # append MKT-RF
+ADD_FACTORS <- FALSE    # append FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
@@ -59,12 +61,12 @@ dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 # Fix RNG before any shuffling inside load_data
 if (!is.null(RNG_SEED)) set.seed(RNG_SEED)
 
-R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly")
+R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly",
+                   add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
 T_full <- nrow(R_all); N_full <- ncol(R_all)
 
 # Select a subset of assets for speed/reproducibility
 N <- min(N_ASSETS, N_full)
-asset_idx <- sort(sample.int(N_full, N))
 R_all <- R_all[, asset_idx, drop = FALSE]
 
 k_grid <- NULL  # will be set after we know N
@@ -165,7 +167,11 @@ for (W_IN in W_IN_GRID) {
   cat("\n=== Average OOS Sharpe by k ===\n")
   print_results(k_grid, SR, method_labels = labels, digits = 4)
 
-  stem <- sprintf("oos_sr_%s_mebeme_ind_monthly_N%d_Win%d_Wout%d", METHOD_STEM, N, W_IN, W_OUT)
+  panel_tag <- if (PANEL_TYPE == "mebeme") "mebeme" else "mebeme_ind"
+  factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
+  mkt_tag <- if (ADD_MKT) "mkt" else "nomkt"
+  stem <- sprintf("oos_sr_%s_%s_monthly_%s_%s_N%d_Win%d_Wout%d",
+                  METHOD_STEM, panel_tag, factors_tag, mkt_tag, N, W_IN, W_OUT)
   csv_path <- file.path(OUT_DIR, paste0(stem, ".csv"))
   plot_base <- file.path(FIG_DIR, stem)
 

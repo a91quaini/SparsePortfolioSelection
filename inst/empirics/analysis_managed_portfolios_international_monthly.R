@@ -3,7 +3,7 @@
 
 ## ---- thread control: must be at the very top ------------------------------
 # Nn = 1L
-Nn = 6L
+Nn = 96L
 Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
@@ -30,14 +30,16 @@ if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
 
 library(SparsePortfolioSelection)
 
-# Configuration
+# Configuration: 420 observations
 PANEL_TYPE <- "International"
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 100         # subset of assets to use
+N_ASSETS <- 112         # subset of assets to use: total = 112
 RNG_SEED <- 12345
-W_IN_GRID <- c(120L, 240L, 360L, 480L, 600L)  # in-sample lengths (months)
+W_IN_GRID <- c(90L, 120L, 240L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
+ADD_MKT <- TRUE         # append region-specific MKT columns
+ADD_FACTORS <- FALSE    # append region-specific FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
@@ -59,12 +61,12 @@ dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 # Fix RNG before any shuffling inside load_data
 if (!is.null(RNG_SEED)) set.seed(RNG_SEED)
 
-R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly")
+R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly",
+                   add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
 T_full <- nrow(R_all); N_full <- ncol(R_all)
 
 # Select a subset of assets for speed/reproducibility
 N <- min(N_ASSETS, N_full)
-asset_idx <- sort(sample.int(N_full, N))
 R_all <- R_all[, asset_idx, drop = FALSE]
 
 k_grid <- NULL  # defined per run once N is known
@@ -165,7 +167,10 @@ for (W_IN in W_IN_GRID) {
   cat("\n=== Average OOS Sharpe by k ===\n")
   print_results(k_grid, SR, method_labels = labels, digits = 4)
 
-  stem <- sprintf("oos_sr_%s_international_monthly_N%d_Win%d_Wout%d", METHOD_STEM, N, W_IN, W_OUT)
+  factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
+  mkt_tag <- if (ADD_MKT) "mkt" else "nomkt"
+  stem <- sprintf("oos_sr_%s_international_monthly_%s_%s_N%d_Win%d_Wout%d",
+                  METHOD_STEM, factors_tag, mkt_tag, N, W_IN, W_OUT)
   csv_path <- file.path(OUT_DIR, paste0(stem, ".csv"))
   plot_base <- file.path(FIG_DIR, stem)
 

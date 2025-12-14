@@ -10,11 +10,12 @@ load_data(
   missing = "keep",
   frequency = c("daily", "monthly"),
   add_mkt = FALSE,
+  add_factors = FALSE,
   shuffle = TRUE
 )
 }
 \arguments{
-\item{type}{Either \code{"US"} (default), \code{"International"}, or \code{"mebeme_ind"} to pick the panel.}
+\item{type}{Either \code{"US"} (default), \code{"International"}, \code{"mebeme_ind"}, or \code{"mebeme"} to pick the panel.}
 
 \item{path}{Optional override for the base \code{data} directory.}
 
@@ -24,8 +25,13 @@ load_data(
 \item{frequency}{Either \code{"daily"} (default) or \code{"monthly"}. Monthly loads
 all managed-portfolio return tables and drops the date column.}
 
-\item{add_mkt}{Logical; if \code{TRUE}, append the Fama-French MKT-RF column
-(second column of factors_ff5_{daily,monthly}) to the asset returns.}
+\item{add_mkt}{Logical; if \code{TRUE}, append MKT-RF columns. For US panels this
+comes from factors_ff5; for international monthly it appends MKT for each
+region; for \code{mebeme}/\code{mebeme_ind} it comes from factors_ff5_monthly.}
+
+\item{add_factors}{Logical; if \code{TRUE}, append the first three factors (MKT,
+SMB, HML). For international monthly, appends the three factors for each
+region. For \code{mebeme}/\code{mebeme_ind}, monthly only.}
 
 \item{shuffle}{Logical; if \code{TRUE} (default), randomly shuffle asset columns
 before returning.}

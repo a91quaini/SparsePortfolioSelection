@@ -73,6 +73,12 @@ percent_to_decimal <- function(df, from_col = 2) {
   df
 }
 
+rf_from_factors <- function(df) {
+  rf_idx <- which(trimws(names(df)) == "RF")
+  if (length(rf_idx) == 0) stop("RF column not found in factors header")
+  df[, c(1, rf_idx), drop = FALSE]
+}
+
 extract_dates <- function(df) as.integer(df[[1]])
 
 align_to_dates <- function(df, dates) {
@@ -104,8 +110,20 @@ portfolio_files <- c(
   "North_America_25_Portfolios_ME_Prior_12_2.csv"     = "returns_na_meprior122_int_monthly"
 )
 
+factor_files <- c(
+  "Asia_Pacific_ex_Japan_3_Factors.csv" = "ff3_factors_monthly_asia_pacific_ex_japan.rds",
+  "Europe_3_Factors.csv"                = "ff3_factors_monthly_europe.rds",
+  "Japan_3_Factors.csv"                 = "ff3_factors_monthly_japan.rds",
+  "North_America_3_Factors.csv"         = "ff3_factors_monthly_north_america.rds"
+)
+
+ff_file <- file.path(rawdir, "F-F_Research_Data_5_Factors_2x3.csv")
+ff_factors <- NULL
+rf_tbl <- NULL
+
 raw_tables <- list()
 dates_list <- list()
+factor_tables <- list()
 
 for (infile in names(portfolio_files)) {
   path <- file.path(rawdir, infile)
@@ -125,11 +143,42 @@ if (length(raw_tables) == 0) stop("No input CSVs found.")
 common_dates <- Reduce(intersect, dates_list)
 common_dates <- sort(common_dates)
 
+# Save region-specific FF3 factors and build RF from the first available set
+rf_built <- FALSE
+for (f_in in names(factor_files)) {
+  f_path <- file.path(rawdir, f_in)
+  if (!file.exists(f_path)) {
+    warning("Skipping missing factor file: ", f_in)
+    next
+  }
+  f_df <- read_monthly_table(f_path)
+  f_df <- clean_sentinels(f_df, from_col = 2)
+  f_df <- filter_window(f_df)
+  f_df <- percent_to_decimal(f_df, from_col = 2)
+  factor_tables[[f_in]] <- f_df
+  saveRDS(f_df, file.path(datadir, factor_files[[f_in]]))
+  message(sprintf("✓ wrote %s (rows=%d, cols=%d)", factor_files[[f_in]], nrow(f_df), ncol(f_df)))
+  if (!rf_built && "RF" %in% names(f_df)) {
+    rf_tbl <- rf_from_factors(f_df)
+    rf_tbl <- rf_tbl[rf_tbl[[1]] %in% common_dates, , drop = FALSE]
+    rf_tbl <- percent_to_decimal(rf_tbl, from_col = 2)
+    saveRDS(rf_tbl, file.path(datadir, "rf_monthly.rds"))
+    rf_built <- TRUE
+  }
+}
+if (!rf_built) stop("No factor file provided RF; cannot build excess returns.")
+
 for (infile in names(portfolio_files)) {
   if (!infile %in% names(raw_tables)) next
   df <- raw_tables[[infile]]
   df <- align_to_dates(df, common_dates)
   df <- percent_to_decimal(df, from_col = 2)
+  # compute excess returns using common RF
+  rf_map <- setNames(rf_tbl[[2]], rf_tbl[[1]])
+  rf_vec <- rf_map[as.character(df[[1]])]
+  if (ncol(df) >= 2) {
+    df[-1] <- sweep(df[-1], 1, rf_vec, "-")
+  }
   outpath <- file.path(datadir, paste0(portfolio_files[[infile]], ".rds"))
   saveRDS(df, outpath)
   message(sprintf("✓ wrote %s (rows=%d, cols=%d)", basename(outpath), nrow(df), ncol(df)))

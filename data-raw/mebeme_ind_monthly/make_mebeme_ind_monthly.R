@@ -98,6 +98,7 @@ f_factors <- clean_sentinels(f_factors, from_col = 2)
 f_factors <- filter_window(f_factors)
 rf <- rf_from_factors(f_factors)
 saveRDS(rf, file.path(datadir, "rf_mebeme_ind_monthly.rds"))
+saveRDS(f_factors, file.path(datadir, "factors_ff5_monthly.rds"))
 
 portfolio_files <- c(
   "100_Portfolios_10x10.csv" = "returns_mebeme100_monthly",
