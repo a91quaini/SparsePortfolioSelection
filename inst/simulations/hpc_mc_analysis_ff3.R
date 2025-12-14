@@ -3,14 +3,14 @@
 library(SparsePortfolioSelection)
 
 set.seed(123)
-Nn <- 6L
-n_cores <- max(1L, Nn - 1L)
+Nn <- 90L
+n_cores <- Nn
 
 # 1) Simulation parameters
 n_assets <- 100              # [25, 50, 100]
-n_obs_grid <- c(120L, 480L)  # allow multiple T (population SR does not depend on T)
+n_obs_grid <- c(120L, 240L, 480L, 600L)  # allow multiple T (population SR does not depend on T)
 k_grid <- 2:(n_assets - 1L)
-n_MC <- 200
+n_MC <- 1000
 search_method <- "lasso"     # fixed to lasso to avoid MIQP on HPC
 
 # 2) LASSO search parameters (update n_obs inside loop)
@@ -18,7 +18,7 @@ lasso_base <- list(
   nlambda = 300L,
   lambda_min_ratio = 1e-3,
   nadd = 80L,
-  nnested = 2L,
+  nnested = 3L,
   alpha = 1,
   standardize = FALSE,
   compute_weights = TRUE,
@@ -35,7 +35,7 @@ sigma_pop <- params$sigma_true
 lasso_pop <- modifyList(lasso_base, list(
   n_obs = n_obs_grid[[1]],
   lambda_min_ratio = 1e-4,  # denser path for population calc
-  nadd = 50L
+  nadd = 100L
 ))
 pop_sr <- numeric(length(k_grid))
 for (i in seq_along(k_grid)) {
