@@ -16,6 +16,7 @@ Nn <- as.integer(Sys.getenv("SPS_CORES", "64"))
 if (is.na(Nn) || Nn < 1L) Nn <- 64L
 det_cores <- parallel::detectCores(logical = TRUE)
 n_cores <- max(1L, min(Nn, if (is.na(det_cores)) Nn else det_cores))
+use_psock <- identical(Sys.getenv("SPS_FORK"), "0")
 
 # Simulation parameters
 n_assets <- 100
@@ -190,10 +191,29 @@ for (n_obs in n_obs_grid) {
     list(est = est_vec, sel = sel_vec)
   }
 
-  res_list <- if (n_cores == 1L) {
-    lapply(seq_len(n_MC), run_one)
+  if (n_cores == 1L || use_psock) {
+    if (n_cores == 1L) {
+      res_list <- lapply(seq_len(n_MC), run_one)
+    } else {
+      cl <- parallel::makeCluster(n_cores)
+      on.exit(parallel::stopCluster(cl), add = TRUE)
+      parallel::clusterEvalQ(cl, {
+        Sys.setenv(OMP_NUM_THREADS = 1L,
+                   OPENBLAS_NUM_THREADS = 1L,
+                   MKL_NUM_THREADS = 1L,
+                   BLIS_NUM_THREADS = 1L)
+        library(SparsePortfolioSelection)
+        NULL
+      })
+      parallel::clusterExport(cl, c("params", "k_grid", "miqp_sample", "lasso_sample", "miqp_pop",
+                                    "mu_pop", "sigma_pop", "pop_sr", "n_obs", "search_method",
+                                    "mve_lasso_search", "mve_miqp_search", "compute_mve_sr_decomposition",
+                                    "simulate_ff3", "n_MC", "run_one"),
+                              envir = environment())
+      res_list <- parallel::parLapply(cl, seq_len(n_MC), run_one)
+    }
   } else {
-    parallel::mclapply(seq_len(n_MC), run_one, mc.cores = n_cores)
+    res_list <- parallel::mclapply(seq_len(n_MC), run_one, mc.cores = n_cores)
   }
 
   est_terms <- t(vapply(res_list, `[[`, numeric(length(k_grid)), "est"))
