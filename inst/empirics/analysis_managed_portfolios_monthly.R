@@ -4,29 +4,29 @@
 ## ---- thread control: must be at the very top ------------------------------
 # Nn = 1L
 Nn = 96L
-Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
-suppressPackageStartupMessages({
-  if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
-    RhpcBLASctl::blas_set_num_threads(Nn)
-    RhpcBLASctl::omp_set_num_threads(Nn)
-    cat("BLAS threads set to:",
-        RhpcBLASctl::blas_get_num_procs(), "\n")
-    cat("OpenMP max threads set to:",
-        RhpcBLASctl::omp_get_max_threads(), "\n")
-  } else {
-    warning("Package 'RhpcBLASctl' not available; falling back to env vars.")
-    Sys.setenv(
-      OMP_NUM_THREADS       = Nn,
-      OPENBLAS_NUM_THREADS  = Nn,
-      MKL_NUM_THREADS       = Nn,
-      BLIS_NUM_THREADS      = Nn
-    )
-  }
-})
-
-# Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
-MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
-if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
+# Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
+# suppressPackageStartupMessages({
+#   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
+#     RhpcBLASctl::blas_set_num_threads(Nn)
+#     RhpcBLASctl::omp_set_num_threads(Nn)
+#     cat("BLAS threads set to:",
+#         RhpcBLASctl::blas_get_num_procs(), "\n")
+#     cat("OpenMP max threads set to:",
+#         RhpcBLASctl::omp_get_max_threads(), "\n")
+#   } else {
+#     warning("Package 'RhpcBLASctl' not available; falling back to env vars.")
+#     Sys.setenv(
+#       OMP_NUM_THREADS       = Nn,
+#       OPENBLAS_NUM_THREADS  = Nn,
+#       MKL_NUM_THREADS       = Nn,
+#       BLIS_NUM_THREADS      = Nn
+#     )
+#   }
+# })
+#
+# # Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
+# MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
+# if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
 
 library(SparsePortfolioSelection)
 
@@ -39,7 +39,7 @@ W_IN_GRID <- c(240L, 360L, 480L)  # in-sample lengths (months)
 W_OUT <- 1             # OOS block length (months): [1]
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
-ADD_FACTORS <- FALSE    # append FF3 (MKT, SMB, HML)
+ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
@@ -65,9 +65,17 @@ R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequen
                    add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
 T_full <- nrow(R_all); N_full <- ncol(R_all)
 
-# Select a subset of assets for speed/reproducibility
+# Select a subset of assets for speed/reproducibility; keep any appended factors
 N <- min(N_ASSETS, N_full)
-R_all <- R_all[, 1:N, drop = FALSE]
+coln <- colnames(R_all)
+factor_idx <- integer(0)
+if (!is.null(coln)) {
+  factor_idx <- which(grepl("MKT", coln) | grepl("SMB", coln) | grepl("HML", coln))
+}
+asset_idx <- setdiff(seq_len(ncol(R_all)), factor_idx)
+asset_idx <- asset_idx[seq_len(min(N, length(asset_idx)))]
+keep_idx <- c(asset_idx, factor_idx)
+R_all <- R_all[, keep_idx, drop = FALSE]
 
 k_grid <- NULL  # defined per run once N is known
 
@@ -84,30 +92,30 @@ lasso_params <- list(
   nadd = 100L,
   nnested = 4L,
   standardize = FALSE,
-  stabilize_sigma = TRUE,
+  stabilize_sigma = FALSE,
   compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = REFIT
 )
 
-miqp_params <- list(
-  exactly_k = TRUE,
-  m = 1L,
-  gamma = 1.0,
-  fmin = -0.25,
-  fmax = 0.25,
-  expand_rounds = 10L,
-  expand_factor = 3.0,
-  expand_tol = 1e-2,
-  mipgap = 1e-4,
-  time_limit = 100,
-  threads = MIQP_THREADS,
-  compute_weights = TRUE,
-  normalize_weights = FALSE,
-  use_refit = REFIT,
-  verbose = FALSE,
-  stabilize_sigma = TRUE
-)
+# miqp_params <- list(
+#   exactly_k = TRUE,
+#   m = 1L,
+#   gamma = 1.0,
+#   fmin = -0.25,
+#   fmax = 0.25,
+#   expand_rounds = 10L,
+#   expand_factor = 3.0,
+#   expand_tol = 1e-2,
+#   mipgap = 1e-4,
+#   time_limit = 100,
+#   threads = MIQP_THREADS,
+#   compute_weights = TRUE,
+#   normalize_weights = FALSE,
+#   use_refit = REFIT,
+#   verbose = FALSE,
+#   stabilize_sigma = TRUE
+# )
 
 compute_weights_fn <- if (METHOD == "miqp") {
   function(Rin, k) {

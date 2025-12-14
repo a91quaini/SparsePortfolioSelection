@@ -5,7 +5,7 @@ library(ggplot2)
 library(readr)
 
 # ---- User configuration ---------------------------------------------------
-RESULTS_SUBDIR <- "managed_portfolios_international_monthly"  # folder under inst/empirics/results
+RESULTS_SUBDIR <- "mebeme_ind_monthly"  # folder under inst/empirics/results
 FILES <- c(
   "oos_sr_lasso_mebeme_ind_monthly_nofactors_mkt_N150_Win120_Wout1.csv",
   "oos_sr_lasso_mebeme_ind_monthly_nofactors_mkt_N150_Win240_Wout1.csv",
