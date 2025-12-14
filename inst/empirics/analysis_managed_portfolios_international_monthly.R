@@ -24,9 +24,9 @@ suppressPackageStartupMessages({
   }
 })
 
-# # Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
-# MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
-# if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
+# Cap Gurobi threads (default to BLAS cap; override via SPS_GUROBI_THREADS)
+MIQP_THREADS <- as.integer(Sys.getenv("SPS_GUROBI_THREADS", Nn))
+if (is.na(MIQP_THREADS) || MIQP_THREADS < 1L) MIQP_THREADS <- 1L
 
 library(SparsePortfolioSelection)
 
