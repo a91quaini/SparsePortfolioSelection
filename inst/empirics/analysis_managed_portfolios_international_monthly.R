@@ -35,11 +35,11 @@ PANEL_TYPE <- "International"
 MISSINGS <- "median"    # how to treat missing values
 N_ASSETS <- 200         # subset of assets to use: total = 112
 RNG_SEED <- 12345
-W_IN_GRID <- c(90L, 120L, 240L)  # in-sample lengths (months)
+W_IN_GRID <- c(120L, 240L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append region-specific MKT columns
-ADD_FACTORS <- FALSE    # append region-specific FF3 (MKT, SMB, HML)
+ADD_FACTORS <- TRUE    # append region-specific FF3 (MKT, SMB, HML)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
@@ -84,7 +84,7 @@ lasso_params <- list(
   nadd = 100L,
   nnested = 4L,
   standardize = FALSE,
-  stabilize_sigma = TRUE,
+  stabilize_sigma = FALSE,
   compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = REFIT
