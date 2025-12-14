@@ -77,12 +77,12 @@ if (METHOD == "lasso") {
   alpha_grid = 1.00
 }
 lasso_params <- list(
-  nlambda = 100L,
-  lambda_min_ratio = 1e-3,
+  nlambda = 400L,
+  lambda_min_ratio = 1e-4,
   alpha = alpha_grid,
   n_folds = 5L,
-  nadd = 80L,
-  nnested = 3L,
+  nadd = 100L,
+  nnested = 4L,
   standardize = FALSE,
   stabilize_sigma = TRUE,
   compute_weights = TRUE,
