@@ -5,13 +5,13 @@ library(ggplot2)
 library(readr)
 
 # ---- User configuration ---------------------------------------------------
-RESULTS_SUBDIR <- "managed_portfolios_monthly"  # folder under inst/empirics/results
+RESULTS_SUBDIR <- "mebeme_ind_monthly"  # folder under inst/empirics/results "mebeme_ind
 FILES <- c(
-  "oos_sr_lasso_monthly_ff3_mkt_N153_Win240_Wout1.csv",
-  "oos_sr_lasso_monthly_ff3_mkt_N153_Win360_Wout1.csv"
+  "oos_sr_lasso_mebeme_ind_monthly_ff3_mkt_N152_Win240_Wout1.csv",
+  "oos_sr_lasso_mebeme_ind_monthly_ff3_mkt_N152_Win480_Wout1.csv"
 )
-LABELS <- c("240","360")  # same length/order as FILES
-FIG_NAME <- "combined_oos_sr_lasso_monthly_ff3_mkt_N153_Wout1.png"
+LABELS <- c("240","480")  # same length/order as FILES
+FIG_NAME <- "combined_oos_sr_lasso_mebeme_ind_monthly_ff3_mkt_N152_Wout1.png"
 
 # ---- No edits below -------------------------------------------------------
 
