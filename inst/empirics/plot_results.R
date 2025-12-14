@@ -5,14 +5,13 @@ library(ggplot2)
 library(readr)
 
 # ---- User configuration ---------------------------------------------------
-RESULTS_SUBDIR <- "mebeme_ind_monthly"  # folder under inst/empirics/results
+RESULTS_SUBDIR <- "managed_portfolios_monthly"  # folder under inst/empirics/results
 FILES <- c(
-  "oos_sr_lasso_mebeme_ind_monthly_nofactors_mkt_N150_Win120_Wout1.csv",
-  "oos_sr_lasso_mebeme_ind_monthly_nofactors_mkt_N150_Win240_Wout1.csv",
-  "oos_sr_lasso_mebeme_ind_monthly_nofactors_mkt_N150_Win480_Wout1.csv"
+  "oos_sr_lasso_monthly_ff3_mkt_N153_Win240_Wout1.csv",
+  "oos_sr_lasso_monthly_ff3_mkt_N153_Win360_Wout1.csv"
 )
-LABELS <- c("Win120", "Win240", "Win480")  # same length/order as FILES
-FIG_NAME <- "combined_oos_sr.png"
+LABELS <- c("240","360")  # same length/order as FILES
+FIG_NAME <- "combined_oos_sr_lasso_monthly_ff3_mkt_N153_Wout1.png"
 
 # ---- No edits below -------------------------------------------------------
 
@@ -25,6 +24,7 @@ fig_dir <- file.path("inst", "empirics", "figures", RESULTS_SUBDIR)
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
 plot_df <- data.frame()
+max_points <- data.frame()
 for (i in seq_along(FILES)) {
   f <- FILES[i]
   lab <- LABELS[i]
@@ -50,7 +50,11 @@ for (i in seq_along(FILES)) {
     warning("Skipping file missing k column: ", path)
     next
   }
-  plot_df <- rbind(plot_df, data.frame(k = dat$k, SR = dat[[sr_col]], label = lab))
+  cur_df <- data.frame(k = dat$k, SR = dat[[sr_col]], label = lab)
+  plot_df <- rbind(plot_df, cur_df)
+  # max point for vertical line
+  idx_max <- which.max(cur_df$SR)
+  max_points <- rbind(max_points, data.frame(k = cur_df$k[idx_max], SR = cur_df$SR[idx_max], label = lab))
 }
 
 if (nrow(plot_df) == 0) stop("No data to plot.")
@@ -58,8 +62,15 @@ if (nrow(plot_df) == 0) stop("No data to plot.")
 p <- ggplot(plot_df, aes(x = k, y = SR, color = label)) +
   geom_line(size = 1) +
   geom_point(size = 2) +
-  labs(title = "Out-of-sample Sharpe ratios", x = "k", y = "Sharpe Ratio", color = "Run") +
-  theme_minimal(base_size = 12)
+  geom_vline(data = max_points, aes(xintercept = k, color = label), linetype = "dashed", alpha = 0.8) +
+  labs(x = "Number of holdings k", y = "OOS Sharpe ratio", color = "In-sample window") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_text(size = 16),
+        legend.text = element_text(size = 14),
+        axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14))
 
 fig_path <- file.path(fig_dir, FIG_NAME)
 ggsave(fig_path, p, width = 8, height = 5, dpi = 150)
