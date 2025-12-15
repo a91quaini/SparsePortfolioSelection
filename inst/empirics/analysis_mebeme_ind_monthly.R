@@ -247,9 +247,13 @@ for (W_IN in W_IN_GRID) {
   panel_tag <- if (PANEL_TYPE == "mebeme") "mebeme" else "mebeme_ind"
   factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
   mkt_tag <- if (ADD_MKT) "mkt" else "nomkt"
-  stem_base <- sprintf("combined_oos_%s_%s_%s%s_%s_%s_Wout%d",
-                       METHOD, if (REFIT) "refit_" else "", panel_tag, "",
-                       factors_tag, mkt_tag, W_OUT)
+  stem_base <- sprintf("combined_oos_%s_%s_%s_%s_%s_Wout%d",
+                       METHOD,
+                       if (REFIT) "refit" else "norefit",
+                       panel_tag,
+                       factors_tag,
+                       mkt_tag,
+                       W_OUT)
   # augment results with less_than_k column
   res_table <- if (COMPLETE_ANALYSIS) {
     data.frame(
@@ -285,34 +289,34 @@ for (W_IN in W_IN_GRID) {
 }
 
 # Combined plots across W_IN (if multiple)
-if (COMPLETE_ANALYSIS && length(sr_list) >= 2) {
+  if (COMPLETE_ANALYSIS && length(sr_list) >= 1) {
   comb_labels <- as.character(W_IN_GRID)
   sr_mat <- do.call(cbind, sr_list)
   base_stem <- sprintf("combined_oos_%s_%s%s_%s_%s_Wout%d",
                        METHOD, if (REFIT) "refit_" else "", panel_tag, factors_tag, mkt_tag, W_OUT)
-  plot_sr_empirics(kg_ref, sr_mat, labels = comb_labels,
-                   save_path = file.path(FIG_DIR, paste0(base_stem, "_sr")))
+  invisible(plot_sr_empirics(kg_ref, sr_mat, labels = comb_labels,
+                             save_path = file.path(FIG_DIR, paste0(base_stem, "_sr"))))
   if (length(turn_list) == length(sr_list)) {
     turn_mat <- do.call(cbind, turn_list)
-    plot_turnover_empirics(kg_ref, turn_mat, labels = comb_labels,
-                           save_path = file.path(FIG_DIR, paste0(base_stem, "_turnover")))
+    invisible(plot_turnover_empirics(kg_ref, turn_mat, labels = comb_labels,
+                                     save_path = file.path(FIG_DIR, paste0(base_stem, "_turnover"))))
   }
   if (length(instab1_list) == length(sr_list)) {
     instab1_mat <- do.call(cbind, instab1_list)
     instab2_mat <- do.call(cbind, instab2_list)
-    plot_weight_instability_empirics(kg_ref, instab1_mat, instab2_mat,
-                                     labels = comb_labels,
-                                     save_path_base = file.path(FIG_DIR, paste0(base_stem, "_weight_instability")))
+    invisible(plot_weight_instability_empirics(kg_ref, instab1_mat, instab2_mat,
+                                               labels = comb_labels,
+                                               save_path_base = file.path(FIG_DIR, paste0(base_stem, "_weight_instability"))))
   }
   if (length(selinst_list) == length(sr_list)) {
     sel_mat <- do.call(cbind, selinst_list)
-    plot_selection_instability_empirics(kg_ref, sel_mat, labels = comb_labels,
-                                        save_path = file.path(FIG_DIR, paste0(base_stem, "_selection_instability")))
+    invisible(plot_selection_instability_empirics(kg_ref, sel_mat, labels = comb_labels,
+                                                  save_path = file.path(FIG_DIR, paste0(base_stem, "_selection_instability"))))
   }
   if (length(lessk_list) == length(sr_list)) {
     lessk_mat <- do.call(cbind, lessk_list)
-    plot_less_than_k(kg_ref, lessk_mat, labels = comb_labels,
-                     save_path = file.path(FIG_DIR, paste0(base_stem, "_less_than_k")),
-                     total_windows = lessk_totals)
+    invisible(plot_less_than_k(kg_ref, lessk_mat, labels = comb_labels,
+                               save_path = file.path(FIG_DIR, paste0(base_stem, "_less_than_k")),
+                               total_windows = lessk_totals))
   }
 }
