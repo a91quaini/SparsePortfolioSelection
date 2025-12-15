@@ -982,6 +982,36 @@ plot_selection_instability_empirics <- function(k_grid, sel_instab, labels = NUL
   p
 }
 
+#' Plot fraction of windows with sparsity < k
+#' @export
+plot_less_than_k <- function(k_grid, less_than_k, labels = NULL, save_path = NULL, total_windows) {
+  less_than_k <- as.matrix(less_than_k)
+  K <- length(k_grid); M <- ncol(less_than_k)
+  if (K != nrow(less_than_k)) stop("k_grid length does not match less_than_k rows.")
+  if (is.null(labels)) labels <- paste0("run", seq_len(M))
+  show_legend <- M > 1
+  frac <- sweep(less_than_k, 2, total_windows, "/")
+  df <- data.frame(k = rep(k_grid, times = M),
+                   frac = as.vector(frac),
+                   series = rep(labels, each = K))
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = frac, color = series)) +
+    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::labs(x = "Number of holdings k", y = "Fraction with sparsity < k",
+                  color = if (show_legend) "In-sample window" else NULL) +
+    ggplot2::theme_minimal(base_size = 14) +
+    ggplot2::theme(plot.title = ggplot2::element_blank(),
+                   legend.position = if (show_legend) "bottom" else "none",
+                   legend.title = ggplot2::element_text(size = 16),
+                   legend.text = ggplot2::element_text(size = 14),
+                   axis.title = ggplot2::element_text(size = 16),
+                   axis.text = ggplot2::element_text(size = 14))
+  if (!is.null(save_path)) {
+    ggplot2::ggsave(paste0(save_path, ".png"), p, width = 8, height = 5, dpi = 150)
+  }
+  p
+}
+
 #' Plot OOS SR results
 #' @export
 plot_sr_empirics <- function(k_grid, SR, labels = NULL, save_path = NULL) {

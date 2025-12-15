@@ -262,6 +262,11 @@ for (W_IN in W_IN_GRID) {
   }
   sr_list[[length(sr_list) + 1L]] <- SR[, 1]
   if (COMPLETE_ANALYSIS) {
+    lessk_list <- get0("lessk_list", ifnotfound = list(), envir = parent.env(environment()))
+    lessk_list[[length(lessk_list) + 1L]] <- less_than_k
+    assign("lessk_list", lessk_list, envir = parent.env(environment()))
+  }
+  if (COMPLETE_ANALYSIS) {
     if (!is.null(res$summary$median_turnover)) turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
     if (!is.null(res$summary$median_weight_instability_L1)) {
       instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
@@ -297,5 +302,11 @@ if (COMPLETE_ANALYSIS && length(sr_list) >= 2) {
     sel_mat <- do.call(cbind, selinst_list)
     plot_selection_instability_empirics(kg_ref, sel_mat, labels = comb_labels,
                                         save_path = file.path(FIG_DIR, paste0(base_stem, "_selection_instability")))
+  }
+  if (exists("lessk_list")) {
+    lessk_mat <- do.call(cbind, get("lessk_list", envir = parent.env(environment())))
+    plot_less_than_k(kg_ref, lessk_mat, labels = comb_labels,
+                     save_path = file.path(FIG_DIR, paste0(base_stem, "_less_than_k")),
+                     total_windows = rep(1, ncol(lessk_mat)))
   }
 }
