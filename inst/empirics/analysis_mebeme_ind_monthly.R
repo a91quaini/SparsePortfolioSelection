@@ -163,7 +163,8 @@ for (W_IN in W_IN_GRID) {
     stop("k_grid differs across W_IN runs; cannot combine plots.")
   }
 
-# Optional parallel run: set PARALLEL <- TRUE to enable
+  # Optional parallel run: set PARALLEL <- TRUE to enable
+  win_count <- NULL
   if (COMPLETE_ANALYSIS) {
     if (PARALLEL) {
       n_cores <- Nn
@@ -197,6 +198,7 @@ for (W_IN in W_IN_GRID) {
     SR <- matrix(res$summary$oos_sr, ncol = 1)
     labels <- METHOD_LABEL
     less_than_k <- integer(length(k_grid))
+    win_count <- res$counts[1]  # total OOS points per k
   } else {
     if (PARALLEL) {
       n_cores <- Nn
@@ -265,7 +267,10 @@ for (W_IN in W_IN_GRID) {
   sr_list[[length(sr_list) + 1L]] <- SR[, 1]
   if (COMPLETE_ANALYSIS) {
     lessk_list[[length(lessk_list) + 1L]] <- less_than_k
-    lessk_totals[length(lessk_totals) + 1L] <- length(windows)
+    if (is.null(win_count)) {
+      win_count <- length(windows) * W_OUT
+    }
+    lessk_totals[length(lessk_totals) + 1L] <- max(1L, win_count)
   }
   if (COMPLETE_ANALYSIS) {
     if (!is.null(res$summary$median_turnover)) turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
