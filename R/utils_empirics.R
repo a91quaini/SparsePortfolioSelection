@@ -888,7 +888,7 @@ plot_turnover_empirics <- function(k_grid, turnover, labels = NULL, save_path = 
                    turnover = as.vector(turnover),
                    series = rep(labels, each = K))
   p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = turnover, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
     ggplot2::labs(x = "Number of holdings k", y = "Median turnover",
                   color = if (show_legend) "In-sample window" else NULL) +
@@ -918,7 +918,7 @@ plot_weight_instability_empirics <- function(k_grid, instab_L1, instab_L2, label
                     L1 = as.vector(instab_L1),
                     series = rep(labels, each = K))
   p1 <- ggplot2::ggplot(df1, ggplot2::aes(x = k, y = L1, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
     ggplot2::labs(x = "Number of holdings k", y = "Median weight instability (ℓ1)",
                   color = if (show_legend) "In-sample window" else NULL) +
@@ -934,7 +934,7 @@ plot_weight_instability_empirics <- function(k_grid, instab_L1, instab_L2, label
                     L2 = as.vector(instab_L2),
                     series = rep(labels, each = K))
   p2 <- ggplot2::ggplot(df2, ggplot2::aes(x = k, y = L2, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
     ggplot2::labs(x = "Number of holdings k", y = "Median weight instability (ℓ2)",
                   color = if (show_legend) "In-sample window" else NULL) +
@@ -965,7 +965,7 @@ plot_selection_instability_empirics <- function(k_grid, sel_instab, labels = NUL
                    sel = as.vector(sel_instab),
                    series = rep(labels, each = K))
   p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = sel, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
     ggplot2::labs(x = "Number of holdings k", y = "Median selection instability",
                   color = if (show_legend) "In-sample window" else NULL) +
@@ -995,7 +995,7 @@ plot_less_than_k <- function(k_grid, less_than_k, labels = NULL, save_path = NUL
                    frac = as.vector(frac),
                    series = rep(labels, each = K))
   p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = frac, color = series)) +
-    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
     ggplot2::labs(x = "Number of holdings k", y = "Fraction with sparsity < k",
                   color = if (show_legend) "In-sample window" else NULL) +
