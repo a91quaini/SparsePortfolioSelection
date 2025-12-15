@@ -1,18 +1,32 @@
-# Plot selected OOS Sharpe ratio results on the same figure.
-# Configure the source folder, a set of CSV filenames, and labels below.
+# Plot selected OOS results together and save figures using the same
+# conventions as the analysis scripts (one combined plot per metric).
 
-library(ggplot2)
 library(readr)
+library(SparsePortfolioSelection)
 
 # ---- User configuration ---------------------------------------------------
-RESULTS_SUBDIR <- "mebeme_ind_monthly"  # folder under inst/empirics/results "mebeme_ind
+# Directory under inst/empirics/results where the CSVs live
+RESULTS_SUBDIR <- "managed_portfolios_monthly" # "mebeme_ind_monthly"
+
+# Filenames to combine (relative to RESULTS_SUBDIR)
 FILES <- c(
-  "oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Win240_Wout1.csv",
-  "oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Win360_Wout1.csv",
-  "oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Win480_Wout1.csv"
+  "combined_oos_lasso_norefit_us_ff3_mkt_Wout1_Win240_sr.csv",
+  "combined_oos_lasso_norefit_us_ff3_mkt_Wout1_Win2360_sr.csv",
+  "combined_oos_lasso_norefit_us_ff3_mkt_Wout1_Win480_sr.csv"
 )
-LABELS <- c("240","360","480")  # same length/order as FILES
-FIG_NAME <- "combined_oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Wout1.png"
+
+# Labels for the legend (same order/length as FILES)
+LABELS <- c("240", "360", "480")
+
+# Base stem for saved figures (do NOT include metric or extension);
+# each metric appends _sr, _turnover, _weight_instability(_l1/_l2),
+# _selection_instability, _less_than_k.
+FIG_STEM <- "combined_oos_lasso_norefit_us_ff3_mkt_Wout1"
+
+# Optional: total number of OOS windows for each file (needed to plot less_than_k)
+# Set to NULL to skip the less-than-k plot, or supply a numeric vector
+# of the same length as FILES.
+TOTAL_WINDOWS <- NULL
 
 # ---- No edits below -------------------------------------------------------
 
@@ -24,12 +38,16 @@ results_dir <- file.path("inst", "empirics", "results", RESULTS_SUBDIR)
 fig_dir <- file.path("inst", "empirics", "figures", RESULTS_SUBDIR)
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
-plot_df <- data.frame()
-max_points <- data.frame()
-turn_df <- data.frame()
-instab1_df <- data.frame()
-instab2_df <- data.frame()
-selinst_df <- data.frame()
+sr_list <- list()
+turn_list <- list()
+instab1_list <- list()
+instab2_list <- list()
+selinst_list <- list()
+lessk_list <- list()
+lessk_totals <- numeric(0)
+used_labels <- character(0)
+k_ref <- NULL
+
 for (i in seq_along(FILES)) {
   f <- FILES[i]
   lab <- LABELS[i]
@@ -39,7 +57,17 @@ for (i in seq_along(FILES)) {
     next
   }
   dat <- readr::read_csv(path, show_col_types = FALSE)
-  # Accept either columns named "k" and "SharpeRatio" or "k" and one method column
+  if (!"k" %in% names(dat)) {
+    warning("Skipping file missing k column: ", path)
+    next
+  }
+  if (is.null(k_ref)) {
+    k_ref <- dat$k
+  } else if (!identical(k_ref, dat$k)) {
+    stop("All files must share the same k grid.")
+  }
+
+  # Sharpe ratio column: prefer SharpeRatio, otherwise first non-k column
   if ("SharpeRatio" %in% names(dat)) {
     sr_col <- "SharpeRatio"
   } else {
@@ -51,70 +79,68 @@ for (i in seq_along(FILES)) {
       next
     }
   }
-  if (!"k" %in% names(dat)) {
-    warning("Skipping file missing k column: ", path)
-    next
-  }
-  cur_df <- data.frame(k = dat$k, SR = dat[[sr_col]], label = lab)
-  plot_df <- rbind(plot_df, cur_df)
-  # max point for vertical line
-  idx_max <- which.max(cur_df$SR)
-  max_points <- rbind(max_points, data.frame(k = cur_df$k[idx_max], SR = cur_df$SR[idx_max], label = lab))
 
-  # optional extra metrics
+  sr_list[[length(sr_list) + 1L]] <- dat[[sr_col]]
+  used_labels <- c(used_labels, lab)
+
   if ("turnover" %in% names(dat)) {
-    turn_df <- rbind(turn_df, data.frame(k = dat$k, val = dat$turnover, label = lab))
+    turn_list[[length(turn_list) + 1L]] <- dat$turnover
   }
   if ("weight_instability_l1" %in% names(dat)) {
-    instab1_df <- rbind(instab1_df, data.frame(k = dat$k, val = dat$weight_instability_l1, label = lab))
+    instab1_list[[length(instab1_list) + 1L]] <- dat$weight_instability_l1
   }
   if ("weight_instability_l2" %in% names(dat)) {
-    instab2_df <- rbind(instab2_df, data.frame(k = dat$k, val = dat$weight_instability_l2, label = lab))
+    instab2_list[[length(instab2_list) + 1L]] <- dat$weight_instability_l2
   }
   if ("selection_instability" %in% names(dat)) {
-    selinst_df <- rbind(selinst_df, data.frame(k = dat$k, val = dat$selection_instability, label = lab))
+    selinst_list[[length(selinst_list) + 1L]] <- dat$selection_instability
+  }
+  if ("less_than_k" %in% names(dat)) {
+    lessk_list[[length(lessk_list) + 1L]] <- dat$less_than_k
+    if (!is.null(TOTAL_WINDOWS) && length(TOTAL_WINDOWS) >= i && !is.na(TOTAL_WINDOWS[i])) {
+      lessk_totals <- c(lessk_totals, TOTAL_WINDOWS[i])
+    } else {
+      lessk_totals <- c(lessk_totals, NA_real_)
+    }
   }
 }
 
-if (nrow(plot_df) == 0) stop("No data to plot.")
+if (length(sr_list) == 0) stop("No data to plot.")
 
-p <- ggplot(plot_df, aes(x = k, y = SR, color = label)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
-  geom_vline(data = max_points, aes(xintercept = k, color = label), linetype = "dashed", alpha = 0.8) +
-  labs(x = "Number of holdings k", y = "OOS Sharpe ratio", color = "In-sample window") +
-  theme_minimal(base_size = 14) +
-  theme(plot.title = element_blank(),
-        legend.position = "bottom",
-        legend.title = element_text(size = 16),
-        legend.text = element_text(size = 14),
-        axis.title = element_text(size = 16),
-        axis.text = element_text(size = 14))
+base_path <- file.path(fig_dir, FIG_STEM)
 
-fig_path <- file.path(fig_dir, FIG_NAME)
-ggsave(fig_path, p, width = 8, height = 5, dpi = 150)
-message("Saved plot to: ", fig_path)
+sr_mat <- do.call(cbind, sr_list)
+invisible(plot_sr_empirics(k_ref, sr_mat, labels = used_labels,
+                           save_path = paste0(base_path, "_sr")))
 
-# Additional plots if data available
-plot_metric <- function(df, ylab, suffix) {
-  if (nrow(df) == 0) return(NULL)
-  p <- ggplot(df, aes(x = k, y = val, color = label)) +
-    geom_line(size = 1) +
-    geom_point(size = 2) +
-    labs(x = "Number of holdings k", y = ylab, color = "In-sample window") +
-    theme_minimal(base_size = 14) +
-    theme(plot.title = element_blank(),
-          legend.position = "bottom",
-          legend.title = element_text(size = 16),
-          legend.text = element_text(size = 14),
-          axis.title = element_text(size = 16),
-          axis.text = element_text(size = 14))
-  fp <- file.path(fig_dir, sub("\\.png$", paste0("_", suffix, ".png"), FIG_NAME))
-  ggsave(fp, p, width = 8, height = 5, dpi = 150)
-  message("Saved plot to: ", fp)
+if (length(turn_list) == length(sr_list)) {
+  turn_mat <- do.call(cbind, turn_list)
+  invisible(plot_turnover_empirics(k_ref, turn_mat, labels = used_labels,
+                                   save_path = paste0(base_path, "_turnover")))
 }
 
-plot_metric(turn_df, "Median turnover", "turnover")
-plot_metric(instab1_df, "Median weight instability (ℓ1)", "weight_instability_l1")
-plot_metric(instab2_df, "Median weight instability (ℓ2)", "weight_instability_l2")
-plot_metric(selinst_df, "Median selection instability", "selection_instability")
+if (length(instab1_list) == length(sr_list) && length(instab2_list) == length(sr_list)) {
+  instab1_mat <- do.call(cbind, instab1_list)
+  instab2_mat <- do.call(cbind, instab2_list)
+  invisible(plot_weight_instability_empirics(k_ref, instab1_mat, instab2_mat,
+                                             labels = used_labels,
+                                             save_path_base = paste0(base_path, "_weight_instability")))
+}
+
+if (length(selinst_list) == length(sr_list)) {
+  sel_mat <- do.call(cbind, selinst_list)
+  invisible(plot_selection_instability_empirics(k_ref, sel_mat, labels = used_labels,
+                                                save_path = paste0(base_path, "_selection_instability")))
+}
+
+# less-than-k needs total windows to compute fractions
+if (length(lessk_list) == length(sr_list) &&
+    length(lessk_totals) == length(sr_list) &&
+    all(!is.na(lessk_totals))) {
+  lessk_mat <- do.call(cbind, lessk_list)
+  invisible(plot_less_than_k(k_ref, lessk_mat, labels = used_labels,
+                             save_path = paste0(base_path, "_less_than_k"),
+                             total_windows = lessk_totals))
+} else if (length(lessk_list) > 0) {
+  warning("Skipping less-than-k plot: TOTAL_WINDOWS not supplied or mismatched.")
+}

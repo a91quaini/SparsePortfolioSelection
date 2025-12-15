@@ -890,7 +890,8 @@ plot_turnover_empirics <- function(k_grid, turnover, labels = NULL, save_path = 
   p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = turnover, color = series)) +
     ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
-    ggplot2::labs(x = "Number of holdings k", y = "Median turnover",
+    ggplot2::scale_y_log10() +
+    ggplot2::labs(x = "Number of holdings k", y = "Log-Median turnover",
                   color = if (show_legend) "In-sample window" else NULL) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(plot.title = ggplot2::element_blank(),
@@ -920,7 +921,8 @@ plot_weight_instability_empirics <- function(k_grid, instab_L1, instab_L2, label
   p1 <- ggplot2::ggplot(df1, ggplot2::aes(x = k, y = L1, color = series)) +
     ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
-    ggplot2::labs(x = "Number of holdings k", y = "Median weight instability (ℓ1)",
+    ggplot2::scale_y_log10() +
+    ggplot2::labs(x = "Number of holdings k", y = "Log-Median weight instability (ℓ1)",
                   color = if (show_legend) "In-sample window" else NULL) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(plot.title = ggplot2::element_blank(),
@@ -936,7 +938,8 @@ plot_weight_instability_empirics <- function(k_grid, instab_L1, instab_L2, label
   p2 <- ggplot2::ggplot(df2, ggplot2::aes(x = k, y = L2, color = series)) +
     ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
-    ggplot2::labs(x = "Number of holdings k", y = "Median weight instability (ℓ2)",
+    ggplot2::scale_y_log10() +
+    ggplot2::labs(x = "Number of holdings k", y = "Log-Median weight instability (ℓ2)",
                   color = if (show_legend) "In-sample window" else NULL) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(plot.title = ggplot2::element_blank(),
@@ -967,7 +970,8 @@ plot_selection_instability_empirics <- function(k_grid, sel_instab, labels = NUL
   p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = sel, color = series)) +
     ggplot2::geom_line(linewidth = 1) +
     ggplot2::geom_point(size = 2) +
-    ggplot2::labs(x = "Number of holdings k", y = "Median selection instability",
+    ggplot2::scale_y_log10() +
+    ggplot2::labs(x = "Number of holdings k", y = "Log-Median selection instability",
                   color = if (show_legend) "In-sample window" else NULL) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(plot.title = ggplot2::element_blank(),
