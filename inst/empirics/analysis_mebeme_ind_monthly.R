@@ -243,13 +243,25 @@ for (W_IN in W_IN_GRID) {
   panel_tag <- if (PANEL_TYPE == "mebeme") "mebeme" else "mebeme_ind"
   factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
   mkt_tag <- if (ADD_MKT) "mkt" else "nomkt"
-  stem <- sprintf("oos_sr_%s_%s_monthly_%s_%s_N%d_Win%d_Wout%d",
-                  METHOD_STEM, panel_tag, factors_tag, mkt_tag, N, W_IN, W_OUT)
-  csv_path <- file.path(OUT_DIR, paste0(stem, ".csv"))
-  plot_base <- file.path(FIG_DIR, stem)
+  stem_base <- sprintf("oos_%s_%s_monthly_%s_%s_N%d_Win%d_Wout%d",
+                       METHOD_STEM, panel_tag, factors_tag, mkt_tag, N, W_IN, W_OUT)
+  csv_path <- file.path(OUT_DIR, paste0(stem_base, "_sr.csv"))
+  plot_base <- file.path(FIG_DIR, paste0(stem_base, "_sr"))
 
   # augment results with less_than_k column
-  res_table <- data.frame(k = k_grid, SharpeRatio = SR[, 1], less_than_k = less_than_k)
+  res_table <- if (COMPLETE_ANALYSIS) {
+    data.frame(
+      k = k_grid,
+      SharpeRatio = SR[, 1],
+      less_than_k = less_than_k,
+      turnover = res$summary$median_turnover,
+      selection_instability = res$summary$median_selection_instability,
+      weight_instability_l1 = res$summary$median_weight_instability_L1,
+      weight_instability_l2 = res$summary$median_weight_instability_L2
+    )
+  } else {
+    data.frame(k = k_grid, SharpeRatio = SR[, 1], less_than_k = less_than_k)
+  }
   write.csv(res_table, csv_path, row.names = FALSE)
   message("Saved results to: ", csv_path)
 
@@ -262,7 +274,7 @@ for (W_IN in W_IN_GRID) {
     if (!is.null(res$summary$median_turnover)) {
       turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
       plot_turnover_empirics(k_grid, res$summary$median_turnover, labels = labels,
-                             save_path = paste0(plot_base, "_turnover"))
+                             save_path = file.path(FIG_DIR, paste0(stem_base, "_turnover")))
     }
     if (!is.null(res$summary$median_weight_instability_L1)) {
       instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
@@ -272,7 +284,7 @@ for (W_IN in W_IN_GRID) {
         res$summary$median_weight_instability_L1,
         res$summary$median_weight_instability_L2,
         labels = labels,
-        save_path_base = paste0(plot_base, "_weight_instability")
+        save_path_base = file.path(FIG_DIR, paste0(stem_base, "_weight_instability"))
       )
     }
     if (!is.null(res$summary$median_selection_instability)) {
@@ -281,7 +293,7 @@ for (W_IN in W_IN_GRID) {
         k_grid,
         res$summary$median_selection_instability,
         labels = labels,
-        save_path = paste0(plot_base, "_selection_instability")
+        save_path = file.path(FIG_DIR, paste0(stem_base, "_selection_instability"))
       )
     }
   }

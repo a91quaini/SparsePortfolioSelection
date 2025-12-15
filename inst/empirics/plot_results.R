@@ -26,6 +26,10 @@ dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
 plot_df <- data.frame()
 max_points <- data.frame()
+turn_df <- data.frame()
+instab1_df <- data.frame()
+instab2_df <- data.frame()
+selinst_df <- data.frame()
 for (i in seq_along(FILES)) {
   f <- FILES[i]
   lab <- LABELS[i]
@@ -56,6 +60,20 @@ for (i in seq_along(FILES)) {
   # max point for vertical line
   idx_max <- which.max(cur_df$SR)
   max_points <- rbind(max_points, data.frame(k = cur_df$k[idx_max], SR = cur_df$SR[idx_max], label = lab))
+
+  # optional extra metrics
+  if ("turnover" %in% names(dat)) {
+    turn_df <- rbind(turn_df, data.frame(k = dat$k, val = dat$turnover, label = lab))
+  }
+  if ("weight_instability_l1" %in% names(dat)) {
+    instab1_df <- rbind(instab1_df, data.frame(k = dat$k, val = dat$weight_instability_l1, label = lab))
+  }
+  if ("weight_instability_l2" %in% names(dat)) {
+    instab2_df <- rbind(instab2_df, data.frame(k = dat$k, val = dat$weight_instability_l2, label = lab))
+  }
+  if ("selection_instability" %in% names(dat)) {
+    selinst_df <- rbind(selinst_df, data.frame(k = dat$k, val = dat$selection_instability, label = lab))
+  }
 }
 
 if (nrow(plot_df) == 0) stop("No data to plot.")
@@ -76,3 +94,27 @@ p <- ggplot(plot_df, aes(x = k, y = SR, color = label)) +
 fig_path <- file.path(fig_dir, FIG_NAME)
 ggsave(fig_path, p, width = 8, height = 5, dpi = 150)
 message("Saved plot to: ", fig_path)
+
+# Additional plots if data available
+plot_metric <- function(df, ylab, suffix) {
+  if (nrow(df) == 0) return(NULL)
+  p <- ggplot(df, aes(x = k, y = val, color = label)) +
+    geom_line(size = 1) +
+    geom_point(size = 2) +
+    labs(x = "Number of holdings k", y = ylab, color = "In-sample window") +
+    theme_minimal(base_size = 14) +
+    theme(plot.title = element_blank(),
+          legend.position = "bottom",
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          axis.title = element_text(size = 16),
+          axis.text = element_text(size = 14))
+  fp <- file.path(fig_dir, sub("\\.png$", paste0("_", suffix, ".png"), FIG_NAME))
+  ggsave(fp, p, width = 8, height = 5, dpi = 150)
+  message("Saved plot to: ", fp)
+}
+
+plot_metric(turn_df, "Median turnover", "turnover")
+plot_metric(instab1_df, "Median weight instability (ℓ1)", "weight_instability_l1")
+plot_metric(instab2_df, "Median weight instability (ℓ2)", "weight_instability_l2")
+plot_metric(selinst_df, "Median selection instability", "selection_instability")
