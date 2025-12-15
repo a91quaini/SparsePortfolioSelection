@@ -33,14 +33,14 @@ library(SparsePortfolioSelection)
 # Configuration: 636 observations
 PANEL_TYPE <- "US"      # ignored for monthly frequency
 MISSINGS <- "median"    # how to treat missing values
-N_ASSETS <- 355         # subset of assets to use: total = 355
+N_ASSETS <- 200         # subset of assets to use: total = 355
 RNG_SEED <- 12345
-W_IN_GRID <- c(480L)  # in-sample lengths (months)
+W_IN_GRID <- c(240L, 360L, 480L)  # in-sample lengths (months)
 W_OUT <- 1             # OOS block length (months): [1]
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
 ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
-COMPLETE_ANALYSIS <- FALSE  # if TRUE, run complete analysis (turnover/instability)
+COMPLETE_ANALYSIS <- TRUE  # if TRUE, run complete analysis (turnover/instability)
 CHECK_K <- TRUE         # warn if solver returns sparsity different from k
 K_TOL <- 1e-9           # tolerance for nonzero weights when checking sparsity
 K_MIN <- 3
