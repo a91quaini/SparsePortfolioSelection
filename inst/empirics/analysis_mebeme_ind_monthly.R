@@ -248,7 +248,7 @@ for (W_IN in W_IN_GRID) {
   if (COMPLETE_ANALYSIS) {
     # Plot turnover / instabilities if available
     if (!is.null(res$summary$median_turnover)) {
-      plot_turnover_empirics(k_grid, res$summary$median_turnover, method_labels = labels,
+      plot_turnover_empirics(k_grid, res$summary$median_turnover, labels = labels,
                              save_path = paste0(plot_base, "_turnover"))
     }
     if (!is.null(res$summary$median_weight_instability_L1)) {
@@ -256,15 +256,15 @@ for (W_IN in W_IN_GRID) {
         k_grid,
         res$summary$median_weight_instability_L1,
         res$summary$median_weight_instability_L2,
-        method_labels = labels,
-        save_path = paste0(plot_base, "_weight_instability")
+        labels = labels,
+        save_path_base = paste0(plot_base, "_weight_instability")
       )
     }
     if (!is.null(res$summary$median_selection_instability)) {
       plot_selection_instability_empirics(
         k_grid,
         res$summary$median_selection_instability,
-        method_labels = labels,
+        labels = labels,
         save_path = paste0(plot_base, "_selection_instability")
       )
     }
