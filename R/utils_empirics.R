@@ -19,7 +19,8 @@
 #'   region. For `mebeme`/`mebeme_ind`, monthly only.
 #' @param shuffle Logical; if `TRUE` (default), randomly shuffle asset columns
 #'   before returning.
-#' @return A numeric matrix of returns (DATE column removed; MKT appended if requested; columns optionally shuffled).
+#' @return A named list with elements `returns` (matrix; DATE removed; factors appended if requested)
+#'   and `rf` (risk-free vector aligned to returns rows, if available; otherwise NULL).
 #' @export
 load_data <- function(type = "US", path = "data", missing = "keep",
                       frequency = c("daily", "monthly"),
@@ -85,6 +86,7 @@ load_data <- function(type = "US", path = "data", missing = "keep",
   }
 
   dates_ref <- NULL
+  rf_vec <- NULL
   mats <- lapply(files, function(f) {
     df <- readRDS(f)
     if (is.null(dates_ref) && ncol(df) >= 1) {
@@ -113,6 +115,8 @@ load_data <- function(type = "US", path = "data", missing = "keep",
         na     = "ff3_factors_monthly_north_america.rds"
       )
       cols_to_add <- list()
+      rf_vec <- numeric(length(dates_ref))
+      have_rf <- FALSE
       for (region in names(factor_files)) {
         fpath <- file.path(dir_path, factor_files[[region]])
         if (!file.exists(fpath)) {
@@ -130,10 +134,15 @@ load_data <- function(type = "US", path = "data", missing = "keep",
         } else if (add_mkt) {
           cols_to_add[[paste0(region, "_MKT")]] <- as.numeric(ff[[2]][idx])
         }
+        if (!have_rf && ncol(ff) >= 5) {
+          rf_vec <- as.numeric(ff[[5]][idx])
+          have_rf <- TRUE
+        }
       }
       if (length(cols_to_add)) {
         mat <- cbind(mat, as.data.frame(cols_to_add, check.names = FALSE))
       }
+      if (!have_rf) rf_vec <- NULL
     } else {
       ff_file <- file.path(dir_path, sprintf("factors_ff5_%s.rds", freq))
       if (!file.exists(ff_file)) stop("factors file not found: ", ff_file)
@@ -151,6 +160,9 @@ load_data <- function(type = "US", path = "data", missing = "keep",
       } else if (add_mkt) {
         mkt_col <- as.numeric(ff[[2]][idx])
         mat <- cbind(mat, mkt_col)
+      }
+      if (ncol(ff) >= 5) {
+        rf_vec <- as.numeric(ff[[5]][idx])
       }
     }
   }
@@ -172,7 +184,7 @@ load_data <- function(type = "US", path = "data", missing = "keep",
     mat <- mat[, sample.int(ncol(mat)), drop = FALSE]
   }
 
-  mat
+  list(returns = mat, rf = rf_vec)
 }
 
 
@@ -395,6 +407,309 @@ run_oos_evaluation_parallel <- function(R,
   )
 }
 
+#' Complete OOS evaluation with turnover and instability metrics
+#'
+#' Extends `run_oos_evaluation` by also computing median turnover, weight instability,
+#' and selection instability across windows.
+#'
+#' @param R Returns matrix (rows = time, cols = assets); first column is not DATE (date must be aligned externally).
+#' @param size_w_in In-sample window length.
+#' @param size_w_out OOS window length.
+#' @param k_grid Vector of k values.
+#' @param oos_type "rolling" or "expanding".
+#' @param compute_weights_fn Function returning list(weights, selection, status) given (Rin, k).
+#' @param compute_weights_fn_params Additional params to pass.
+#' @param rf Optional risk-free vector/scalar aligned to rows of R for turnover computation.
+#' @param sharpe_fn Either "mean" (mean/sd) or "median" (median/iqr) for OOS SR aggregation.
+#' @param return_details Logical; if FALSE return only a summary data.frame.
+#' @export
+run_complete_oos_evaluation <- function(R,
+                                        size_w_in,
+                                        size_w_out,
+                                        k_grid,
+                                        oos_type = c("rolling", "expanding"),
+                                        compute_weights_fn,
+                                        compute_weights_fn_params = list(),
+                                        rf = 0,
+                                        sharpe_fn = c("median", "mean"),
+                                        return_details = FALSE) {
+  oos_type <- match.arg(oos_type)
+  sharpe_fn <- match.arg(sharpe_fn)
+  R <- as.matrix(R)
+  Tobs <- nrow(R); N <- ncol(R)
+  if (Tobs < 2) stop("R must have at least 2 rows.")
+  windows <- .build_windows(Tobs, size_w_in, size_w_out, oos_type)
+  W <- length(windows); K <- length(k_grid)
+
+  oos_concat <- vector("list", K)
+  weights_path <- vector("list", K)
+  selections_path <- vector("list", K)
+  for (ik in seq_len(K)) {
+    oos_concat[[ik]] <- numeric(0)
+    weights_path[[ik]] <- list()
+    selections_path[[ik]] <- list()
+  }
+  counts_obs <- integer(K)
+
+  for (w in seq_len(W)) {
+    idx_in <- windows[[w]]$idx_in
+    idx_out <- windows[[w]]$idx_out
+    Rin <- R[idx_in, , drop = FALSE]
+    Rout <- R[idx_out, , drop = FALSE]
+
+    for (ik in seq_along(k_grid)) {
+      k <- k_grid[ik]
+      res <- do.call(compute_weights_fn, c(list(Rin, k), compute_weights_fn_params))
+      if (is.null(res$weights)) stop("compute_weights_fn must return a `weights` element.")
+      wopt <- as.numeric(res$weights)
+      weights_path[[ik]][[length(weights_path[[ik]]) + 1L]] <- wopt
+      sel_raw <- res$selection
+      sel_idx <- if (is.null(sel_raw)) integer() else {
+        if (is.logical(sel_raw)) which(sel_raw) else as.integer(sel_raw)
+      }
+      selections_path[[ik]][[length(selections_path[[ik]]) + 1L]] <- sel_idx
+
+      rp <- if (length(sel_idx) == 0) {
+        drop(Rout %*% wopt)
+      } else {
+        drop(Rout[, sel_idx, drop = FALSE] %*% wopt[sel_idx])
+      }
+      if (length(rp) > 0) {
+        rp <- rp[is.finite(rp)]
+        if (length(rp) > 0) {
+          oos_concat[[ik]] <- c(oos_concat[[ik]], rp)
+          counts_obs[ik] <- counts_obs[ik] + length(rp)
+        }
+      }
+    }
+  }
+
+  oos_by_k <- numeric(K)
+  for (ik in seq_len(K)) {
+    r <- oos_concat[[ik]]
+    if (length(r) >= 2) {
+      if (sharpe_fn == "median") {
+        iqr <- stats::IQR(r, na.rm = TRUE)
+        med <- stats::median(r, na.rm = TRUE)
+        oos_by_k[ik] <- if (is.finite(iqr) && iqr > 0) med / iqr else NA_real_
+      } else {
+        s <- stats::sd(r, na.rm = TRUE)
+        oos_by_k[ik] <- if (is.finite(s) && s > 0) mean(r, na.rm = TRUE) / s else NA_real_
+      }
+    } else {
+      oos_by_k[ik] <- NA_real_
+    }
+  }
+
+  turnover_med <- numeric(K)
+  instab_L1_med <- numeric(K)
+  instab_L2_med <- numeric(K)
+  sel_instab_med <- numeric(K)
+
+  if (length(rf) == 1L) rf_vec <- rep(rf, Tobs) else rf_vec <- rf
+  if (length(rf_vec) < Tobs) stop("rf length must match nrow(R) or be scalar.")
+
+  for (ik in seq_len(K)) {
+    w_path <- weights_path[[ik]]
+    if (length(w_path) >= 2) {
+      # turnover: need returns aligned to rebalances
+      # weights_path length = W; each rebalance applies to next Rout block (size size_w_out)
+      # use the first row of each Rout for turnover
+      # Build returns aligned to weights changes
+      ret_aligned <- matrix(NA_real_, nrow = length(w_path), ncol = N)
+      for (j in seq_along(windows)) {
+        t_out <- windows[[j]]$idx_out[1]
+        if (t_out <= Tobs) ret_aligned[j, ] <- R[t_out, ]
+      }
+      turn <- compute_turnover(w_path, ret_aligned, rf_vec[seq_len(nrow(ret_aligned))])
+      turnover_med[ik] <- turn$median_to
+
+      instab <- compute_weight_instability(w_path)
+      instab_L1_med[ik] <- instab$median_L1
+      instab_L2_med[ik] <- instab$median_L2
+
+      sel_instab <- selection_instability(selections_path[[ik]])
+      sel_instab_med[ik] <- sel_instab$median_distance
+    } else {
+      turnover_med[ik] <- NA_real_
+      instab_L1_med[ik] <- NA_real_
+      instab_L2_med[ik] <- NA_real_
+      sel_instab_med[ik] <- NA_real_
+    }
+  }
+
+  summary_df <- data.frame(
+    k = k_grid,
+    oos_sr = oos_by_k,
+    median_turnover = turnover_med,
+    median_weight_instability_L1 = instab_L1_med,
+    median_weight_instability_L2 = instab_L2_med,
+    median_selection_instability = sel_instab_med
+  )
+
+  if (!return_details) return(summary_df)
+  list(
+    summary = summary_df,
+    oos_returns = oos_concat,
+    weights_path = weights_path,
+    selections_path = selections_path
+  )
+}
+
+#' Parallel complete OOS evaluation with turnover and instability metrics
+#'
+#' Same as `run_complete_oos_evaluation` but parallelizes over windows using
+#' `parallel::mclapply`.
+#'
+#' @inheritParams run_complete_oos_evaluation
+#' @param n_cores Number of cores; defaults to `max(1, detectCores() - 1)`.
+#' @export
+run_complete_oos_evaluation_parallel <- function(R,
+                                                 size_w_in,
+                                                 size_w_out,
+                                                 k_grid,
+                                                 oos_type = c("rolling", "expanding"),
+                                                 compute_weights_fn,
+                                                 compute_weights_fn_params = list(),
+                                                 rf = 0,
+                                                 sharpe_fn = c("median", "mean"),
+                                                 n_cores = NULL,
+                                                 return_details = FALSE) {
+  oos_type <- match.arg(oos_type)
+  sharpe_fn <- match.arg(sharpe_fn)
+  R <- as.matrix(R)
+  Tobs <- nrow(R); N <- ncol(R)
+  if (Tobs < 2) stop("R must have at least 2 rows.")
+  windows <- .build_windows(Tobs, size_w_in, size_w_out, oos_type)
+  W <- length(windows); K <- length(k_grid)
+
+  if (is.null(n_cores)) {
+    n_cores <- max(1L, parallel::detectCores(logical = TRUE) - 1L)
+  } else {
+    n_cores <- max(1L, as.integer(n_cores))
+  }
+
+  worker <- function(w_idx) {
+    idx_in <- windows[[w_idx]]$idx_in
+    idx_out <- windows[[w_idx]]$idx_out
+    Rin <- R[idx_in, , drop = FALSE]
+    Rout <- R[idx_out, , drop = FALSE]
+    oos_list <- vector("list", K)
+    weights_list <- vector("list", K)
+    sel_list <- vector("list", K)
+    for (ik in seq_along(k_grid)) {
+      k <- k_grid[ik]
+      res <- do.call(compute_weights_fn, c(list(Rin, k), compute_weights_fn_params))
+      if (is.null(res$weights)) stop("compute_weights_fn must return a `weights` element.")
+      wopt <- as.numeric(res$weights)
+      sel_raw <- res$selection
+      sel_idx <- if (is.null(sel_raw)) integer() else {
+        if (is.logical(sel_raw)) which(sel_raw) else as.integer(sel_raw)
+      }
+      weights_list[[ik]] <- wopt
+      sel_list[[ik]] <- sel_idx
+      rp <- if (length(sel_idx) == 0) {
+        drop(Rout %*% wopt)
+      } else {
+        drop(Rout[, sel_idx, drop = FALSE] %*% wopt[sel_idx])
+      }
+      oos_list[[ik]] <- if (length(rp)) rp[is.finite(rp)] else numeric(0)
+    }
+    list(oos = oos_list, weights = weights_list, selections = sel_list)
+  }
+
+  res_list <- if (n_cores == 1L) {
+    lapply(seq_len(W), worker)
+  } else {
+    parallel::mclapply(seq_len(W), worker, mc.cores = n_cores)
+  }
+
+  oos_concat <- vector("list", K)
+  weights_path <- vector("list", K)
+  selections_path <- vector("list", K)
+  for (ik in seq_len(K)) {
+    oos_concat[[ik]] <- numeric(0)
+    weights_path[[ik]] <- list()
+    selections_path[[ik]] <- list()
+  }
+
+  for (w in seq_len(W)) {
+    res <- res_list[[w]]
+    for (ik in seq_len(K)) {
+      oos_concat[[ik]] <- c(oos_concat[[ik]], res$oos[[ik]])
+      weights_path[[ik]][[length(weights_path[[ik]]) + 1L]] <- res$weights[[ik]]
+      selections_path[[ik]][[length(selections_path[[ik]]) + 1L]] <- res$selections[[ik]]
+    }
+  }
+
+  oos_by_k <- numeric(K)
+  for (ik in seq_len(K)) {
+    r <- oos_concat[[ik]]
+    if (length(r) >= 2) {
+      if (sharpe_fn == "median") {
+        iqr <- stats::IQR(r, na.rm = TRUE)
+        med <- stats::median(r, na.rm = TRUE)
+        oos_by_k[ik] <- if (is.finite(iqr) && iqr > 0) med / iqr else NA_real_
+      } else {
+        s <- stats::sd(r, na.rm = TRUE)
+        oos_by_k[ik] <- if (is.finite(s) && s > 0) mean(r, na.rm = TRUE) / s else NA_real_
+      }
+    } else {
+      oos_by_k[ik] <- NA_real_
+    }
+  }
+
+  turnover_med <- numeric(K)
+  instab_L1_med <- numeric(K)
+  instab_L2_med <- numeric(K)
+  sel_instab_med <- numeric(K)
+
+  if (length(rf) == 1L) rf_vec <- rep(rf, Tobs) else rf_vec <- rf
+  if (length(rf_vec) < Tobs) stop("rf length must match nrow(R) or be scalar.")
+
+  for (ik in seq_len(K)) {
+    w_path <- weights_path[[ik]]
+    if (length(w_path) >= 2) {
+      ret_aligned <- matrix(NA_real_, nrow = length(windows), ncol = N)
+      for (j in seq_along(windows)) {
+        t_out <- windows[[j]]$idx_out[1]
+        if (t_out <= Tobs) ret_aligned[j, ] <- R[t_out, ]
+      }
+      turn <- compute_turnover(w_path, ret_aligned, rf_vec[seq_len(nrow(ret_aligned))])
+      turnover_med[ik] <- turn$median_to
+
+      instab <- compute_weight_instability(w_path)
+      instab_L1_med[ik] <- instab$median_L1
+      instab_L2_med[ik] <- instab$median_L2
+
+      sel_instab <- selection_instability(selections_path[[ik]])
+      sel_instab_med[ik] <- sel_instab$median_distance
+    } else {
+      turnover_med[ik] <- NA_real_
+      instab_L1_med[ik] <- NA_real_
+      instab_L2_med[ik] <- NA_real_
+      sel_instab_med[ik] <- NA_real_
+    }
+  }
+
+  summary_df <- data.frame(
+    k = k_grid,
+    oos_sr = oos_by_k,
+    median_turnover = turnover_med,
+    median_weight_instability_L1 = instab_L1_med,
+    median_weight_instability_L2 = instab_L2_med,
+    median_selection_instability = sel_instab_med
+  )
+
+  if (!return_details) return(summary_df)
+  list(
+    summary = summary_df,
+    oos_returns = oos_concat,
+    weights_path = weights_path,
+    selections_path = selections_path
+  )
+}
+
 #' Fast covariance helper
 #'
 #' Lightweight covariance helper without importing stats
@@ -409,6 +724,121 @@ cov_fast <- function(X) {
   mu <- colMeans(X)
   Xc <- sweep(X, 2L, mu, FUN = "-")
   crossprod(Xc) / (n - 1)
+}
+
+#' Compute one-way turnover over a full weight path
+#'
+#' @param weights List of weight vectors (one per rebalance) or a matrix with rows = rebalances.
+#'   Row t is the portfolio formed at the end of period t and held over period t+1.
+#' @param R_excess Matrix of excess returns (rows are time, cols are assets).
+#' @param rf Vector/scalar of risk-free rates aligned to rows of R_excess.
+#' @param tol Tolerance for treating weights as zero.
+#' @return A list with `to` (vector of turnover per rebalance) and `median_to`.
+#' @export
+compute_turnover <- function(weights, R_excess, rf, tol = 1e-12) {
+  if (is.list(weights)) {
+    w_mat <- do.call(rbind, weights)
+  } else {
+    w_mat <- as.matrix(weights)
+  }
+  R_excess <- as.matrix(R_excess)
+  if (nrow(w_mat) < 2) stop("weights must have at least 2 rebalances.")
+  if (nrow(R_excess) < nrow(w_mat)) stop("R_excess must have at least as many rows as weights.")
+  if (length(rf) == 1L) rf <- rep(rf, nrow(R_excess))
+  if (length(rf) != nrow(R_excess)) stop("rf length must match nrow(R_excess) or be scalar.")
+
+  T_w <- nrow(w_mat)
+  to_vec <- numeric(T_w - 1L)
+  for (t in seq_len(T_w - 1L)) {
+    to_vec[t] <- compute_turnover_window_t(w_mat[t, ], w_mat[t + 1L, ],
+                                           R_excess[t + 1L, ], rf[t + 1L], tol = tol)
+  }
+  list(to = to_vec, median_to = stats::median(to_vec, na.rm = TRUE))
+}
+
+#' Compute one-way turnover for a single rebalance window
+#'
+#' @param w_prev Portfolio held over period t (weights after rebalance at t-1).
+#' @param w_next Portfolio formed at end of period t (weights to hold over t+1).
+#' @param r_excess Excess returns vector for period t.
+#' @param rf Risk-free rate for period t.
+#' @param tol Tolerance for treating weights as zero.
+#' @return Scalar one-way turnover \code{sum(abs(w_next - w_pre))}.
+#' @export
+compute_turnover_window_t <- function(w_prev, w_next, r_excess, rf, tol = 1e-12) {
+  g <- 1 + r_excess + rf
+  w_pre <- w_prev * g
+  denom <- sum(w_pre)
+  if (!is.finite(denom) || abs(denom) < tol) return(NA_real_)
+  w_pre <- w_pre / denom
+  sum(abs(w_next - w_pre))
+}
+
+#' Compute weight instability (L1 and L2) across adjacent windows
+#'
+#' @param w_prev Weight vector at t (after rebalance at t).
+#' @param w_next Weight vector at t+1 (after rebalance at t+1).
+#' @return A length-2 numeric vector: c(L1, L2).
+#' @export
+compute_weight_instability_window <- function(w_prev, w_next) {
+  diff <- w_next - w_prev
+  c(L1 = sum(abs(diff)), L2 = sqrt(sum(diff^2)))
+}
+
+#' @rdname compute_weight_instability_window
+#' @export
+compute_weight_instability <- function(weights) {
+  if (is.list(weights)) {
+    w_mat <- do.call(rbind, weights)
+  } else {
+    w_mat <- as.matrix(weights)
+  }
+  if (nrow(w_mat) < 2) stop("weights must have at least 2 rebalances.")
+  L1 <- numeric(nrow(w_mat) - 1L)
+  L2 <- numeric(nrow(w_mat) - 1L)
+  for (t in seq_len(nrow(w_mat) - 1L)) {
+    diff <- w_mat[t + 1L, ] - w_mat[t, ]
+    L1[t] <- sum(abs(diff))
+    L2[t] <- sqrt(sum(diff^2))
+  }
+  list(
+    instability_L1 = L1,
+    instability_L2 = L2,
+    median_L1 = stats::median(L1, na.rm = TRUE),
+    median_L2 = stats::median(L2, na.rm = TRUE)
+  )
+}
+
+#' Compute selection instability (Jaccard distance) for a single step
+#'
+#' @param sel_prev Logical or integer vector of selected assets at t.
+#' @param sel_next Logical or integer vector of selected assets at t+1.
+#' @return Jaccard distance (1 - Jaccard index).
+#' @export
+selection_instability_window <- function(sel_prev, sel_next) {
+  if (is.logical(sel_prev)) sel_prev <- which(sel_prev)
+  if (is.logical(sel_next)) sel_next <- which(sel_next)
+  sel_prev <- unique(as.integer(sel_prev))
+  sel_next <- unique(as.integer(sel_next))
+  if (length(sel_prev) == 0 && length(sel_next) == 0) return(0)
+  inter <- length(intersect(sel_prev, sel_next))
+  uni <- length(union(sel_prev, sel_next))
+  if (uni == 0) return(0)
+  1 - inter / uni
+}
+
+#' Compute selection instability over a path of supports
+#'
+#' @param selections List of supports (logical or integer vectors) for each rebalance.
+#' @return A list with per-step distances and median distance.
+#' @export
+selection_instability <- function(selections) {
+  if (!is.list(selections) || length(selections) < 2) stop("selections must be a list of length >= 2.")
+  D <- numeric(length(selections) - 1L)
+  for (i in seq_len(length(selections) - 1L)) {
+    D[i] <- selection_instability_window(selections[[i]], selections[[i + 1L]])
+  }
+  list(distance = D, median_distance = stats::median(D, na.rm = TRUE))
 }
 
 #' Print OOS SR results

@@ -7,11 +7,12 @@ library(readr)
 # ---- User configuration ---------------------------------------------------
 RESULTS_SUBDIR <- "mebeme_ind_monthly"  # folder under inst/empirics/results "mebeme_ind
 FILES <- c(
-  "oos_sr_lasso_mebeme_ind_monthly_ff3_mkt_N152_Win240_Wout1.csv",
-  "oos_sr_lasso_mebeme_ind_monthly_ff3_mkt_N152_Win480_Wout1.csv"
+  "oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Win240_Wout1.csv",
+  "oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Win360_Wout1.csv",
+  "oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Win480_Wout1.csv"
 )
-LABELS <- c("240","480")  # same length/order as FILES
-FIG_NAME <- "combined_oos_sr_lasso_mebeme_ind_monthly_ff3_mkt_N152_Wout1.png"
+LABELS <- c("240","360","480")  # same length/order as FILES
+FIG_NAME <- "combined_oos_sr_lasso_mebeme_monthly_ff3_mkt_N103_Wout1.png"
 
 # ---- No edits below -------------------------------------------------------
 

@@ -40,6 +40,7 @@ W_OUT <- 1             # OOS block length (months): [1]
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
 ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
+COMPLETE_ANALYSIS <- FALSE  # if TRUE, run complete analysis (turnover/instability)
 K_MIN <- 3
 K_STEP <- 2
 K_CAP <- N_ASSETS - 1
@@ -143,34 +144,68 @@ for (W_IN in W_IN_GRID) {
   message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
   # Optional parallel run: set PARALLEL <- TRUE to enable
-  if (PARALLEL) {
-    n_cores <- Nn
-    sr_vec <- run_oos_evaluation_parallel(
-      R = R,
-      size_w_in = W_IN,
-      size_w_out = W_OUT,
-      k_grid = k_grid,
-      oos_type = OOS_TYPE,
-      compute_weights_fn = compute_weights_fn,
-      compute_weights_fn_params = list(),
-      n_cores = n_cores,
-      return_details = FALSE
-    )
+  if (COMPLETE_ANALYSIS) {
+    if (PARALLEL) {
+      n_cores <- Nn
+      res <- run_complete_oos_evaluation_parallel(
+        R = R,
+        size_w_in = W_IN,
+        size_w_out = W_OUT,
+        k_grid = k_grid,
+        oos_type = OOS_TYPE,
+        compute_weights_fn = compute_weights_fn,
+        compute_weights_fn_params = list(),
+        rf = 0,
+        sharpe_fn = "median",
+        n_cores = n_cores,
+        return_details = TRUE
+      )
+    } else {
+      res <- run_complete_oos_evaluation(
+        R = R,
+        size_w_in = W_IN,
+        size_w_out = W_OUT,
+        k_grid = k_grid,
+        oos_type = OOS_TYPE,
+        compute_weights_fn = compute_weights_fn,
+        compute_weights_fn_params = list(),
+        rf = 0,
+        sharpe_fn = "median",
+        return_details = TRUE
+      )
+    }
+    SR <- matrix(res$summary$oos_sr, ncol = 1)
+    labels <- METHOD_LABEL
   } else {
-    sr_vec <- run_oos_evaluation(
-      R = R,
-      size_w_in = W_IN,
-      size_w_out = W_OUT,
-      k_grid = k_grid,
-      oos_type = OOS_TYPE,
-      compute_weights_fn = compute_weights_fn,
-      compute_weights_fn_params = list(),
-      return_details = FALSE
-    )
-  }
+    if (PARALLEL) {
+      n_cores <- Nn
+      sr_vec <- run_oos_evaluation_parallel(
+        R = R,
+        size_w_in = W_IN,
+        size_w_out = W_OUT,
+        k_grid = k_grid,
+        oos_type = OOS_TYPE,
+        compute_weights_fn = compute_weights_fn,
+        compute_weights_fn_params = list(),
+        n_cores = n_cores,
+        return_details = FALSE
+      )
+    } else {
+      sr_vec <- run_oos_evaluation(
+        R = R,
+        size_w_in = W_IN,
+        size_w_out = W_OUT,
+        k_grid = k_grid,
+        oos_type = OOS_TYPE,
+        compute_weights_fn = compute_weights_fn,
+        compute_weights_fn_params = list(),
+        return_details = FALSE
+      )
+    }
 
-  SR <- matrix(sr_vec, ncol = 1)
-  labels <- METHOD_LABEL
+    SR <- matrix(sr_vec, ncol = 1)
+    labels <- METHOD_LABEL
+  }
 
   cat("\n=== Average OOS Sharpe by k ===\n")
   print_results(k_grid, SR, method_labels = labels, digits = 4)
