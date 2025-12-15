@@ -3,7 +3,7 @@
 
 ## ---- thread control: must be at the very top ------------------------------
 # Nn = 1L
-Nn = 6L
+Nn = 14L
 Nn = min(Nn, parallel::detectCores(logical = TRUE) - 1L)
 suppressPackageStartupMessages({
   if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
@@ -45,7 +45,7 @@ K_TOL <- 1e-9           # tolerance for nonzero weights when checking sparsity
 K_MIN <- 3
 K_STEP <- 5
 K_CAP <- N_ASSETS - 1
-METHOD <- "miqp"        # "lasso" | "elnet" | "miqp"
+METHOD <- "lasso"        # "lasso" | "elnet" | "miqp"
 REFIT <- FALSE
 PARALLEL <- TRUE
 COMPLETE_ANALYSIS <- FALSE  # if TRUE, run complete analysis (turnover/instability)
@@ -64,13 +64,16 @@ dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 # Fix RNG before any shuffling inside load_data
 if (!is.null(RNG_SEED)) set.seed(RNG_SEED)
 
-R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly",
-                   add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
+ld <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly",
+                add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
+R_all <- ld$returns
+rf_vec <- if (is.null(ld$rf)) rep(0, nrow(R_all)) else ld$rf
 T_full <- nrow(R_all); N_full <- ncol(R_all)
 
 # Select a subset of assets for speed/reproducibility
 N <- min(N_ASSETS, N_full)
 R_all <- R_all[, 1:N, drop = FALSE]
+if (!is.null(rf_vec)) rf_vec <- rf_vec[seq_len(nrow(R_all))]
 
 k_grid <- NULL  # will be set after we know N
 
@@ -159,7 +162,7 @@ for (W_IN in W_IN_GRID) {
         oos_type = OOS_TYPE,
         compute_weights_fn = compute_weights_fn,
         compute_weights_fn_params = list(),
-        rf = 0,
+        rf = rf_vec,
         sharpe_fn = "median",
         n_cores = n_cores,
         return_details = TRUE
@@ -173,7 +176,7 @@ for (W_IN in W_IN_GRID) {
         oos_type = OOS_TYPE,
         compute_weights_fn = compute_weights_fn,
         compute_weights_fn_params = list(),
-        rf = 0,
+        rf = rf_vec,
         sharpe_fn = "median",
         return_details = TRUE
       )
@@ -241,4 +244,29 @@ for (W_IN in W_IN_GRID) {
 
   plot_sr_empirics(k_grid, SR, save_path = plot_base)
   message("Saved figure to: ", plot_base, ".png")
+
+  if (COMPLETE_ANALYSIS) {
+    # Plot turnover / instabilities if available
+    if (!is.null(res$summary$median_turnover)) {
+      plot_turnover_empirics(k_grid, res$summary$median_turnover, method_labels = labels,
+                             save_path = paste0(plot_base, "_turnover"))
+    }
+    if (!is.null(res$summary$median_weight_instability_L1)) {
+      plot_weight_instability_empirics(
+        k_grid,
+        res$summary$median_weight_instability_L1,
+        res$summary$median_weight_instability_L2,
+        method_labels = labels,
+        save_path = paste0(plot_base, "_weight_instability")
+      )
+    }
+    if (!is.null(res$summary$median_selection_instability)) {
+      plot_selection_instability_empirics(
+        k_grid,
+        res$summary$median_selection_instability,
+        method_labels = labels,
+        save_path = paste0(plot_base, "_selection_instability")
+      )
+    }
+  }
 }

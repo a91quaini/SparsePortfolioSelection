@@ -62,8 +62,10 @@ dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 # Fix RNG before any shuffling inside load_data
 if (!is.null(RNG_SEED)) set.seed(RNG_SEED)
 
-R_all <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly",
-                   add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
+ld <- load_data(type = PANEL_TYPE, missing = MISSINGS, path = "data", frequency = "monthly",
+                add_mkt = ADD_MKT, add_factors = ADD_FACTORS)
+R_all <- ld$returns
+rf_vec <- if (is.null(ld$rf)) rep(0, nrow(R_all)) else ld$rf
 T_full <- nrow(R_all); N_full <- ncol(R_all)
 
 # Select a subset of assets for speed/reproducibility; keep any appended factors
@@ -77,6 +79,7 @@ asset_idx <- setdiff(seq_len(ncol(R_all)), factor_idx)
 asset_idx <- asset_idx[seq_len(min(N, length(asset_idx)))]
 keep_idx <- c(asset_idx, factor_idx)
 R_all <- R_all[, keep_idx, drop = FALSE]
+if (!is.null(rf_vec)) rf_vec <- rf_vec[seq_len(nrow(R_all))]
 
 k_grid <- NULL  # defined per run once N is known
 
@@ -155,7 +158,7 @@ for (W_IN in W_IN_GRID) {
         oos_type = OOS_TYPE,
         compute_weights_fn = compute_weights_fn,
         compute_weights_fn_params = list(),
-        rf = 0,
+        rf = rf_vec,
         sharpe_fn = "median",
         n_cores = n_cores,
         return_details = TRUE
@@ -169,7 +172,7 @@ for (W_IN in W_IN_GRID) {
         oos_type = OOS_TYPE,
         compute_weights_fn = compute_weights_fn,
         compute_weights_fn_params = list(),
-        rf = 0,
+        rf = rf_vec,
         sharpe_fn = "median",
         return_details = TRUE
       )
@@ -222,4 +225,28 @@ for (W_IN in W_IN_GRID) {
 
   plot_sr_empirics(k_grid, SR, save_path = plot_base)
   message("Saved figure to: ", plot_base, ".png")
+
+  if (COMPLETE_ANALYSIS) {
+    if (!is.null(res$summary$median_turnover)) {
+      plot_turnover_empirics(k_grid, res$summary$median_turnover, method_labels = labels,
+                             save_path = paste0(plot_base, "_turnover"))
+    }
+    if (!is.null(res$summary$median_weight_instability_L1)) {
+      plot_weight_instability_empirics(
+        k_grid,
+        res$summary$median_weight_instability_L1,
+        res$summary$median_weight_instability_L2,
+        method_labels = labels,
+        save_path = paste0(plot_base, "_weight_instability")
+      )
+    }
+    if (!is.null(res$summary$median_selection_instability)) {
+      plot_selection_instability_empirics(
+        k_grid,
+        res$summary$median_selection_instability,
+        method_labels = labels,
+        save_path = paste0(plot_base, "_selection_instability")
+      )
+    }
+  }
 }

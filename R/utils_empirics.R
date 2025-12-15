@@ -876,6 +876,94 @@ save_results <- function(path, k_grid, SR, method_labels = NULL) {
   path
 }
 
+#' Plot median turnover vs k
+#' @export
+plot_turnover_empirics <- function(k_grid, turnover, method_labels = NULL, save_path = NULL) {
+  turnover <- as.matrix(turnover)
+  K <- length(k_grid); M <- ncol(turnover)
+  if (K != nrow(turnover)) stop("k_grid length does not match turnover rows.")
+  if (is.null(method_labels)) method_labels <- paste0("Method", seq_len(M))
+  df <- data.frame(k = rep(k_grid, times = M),
+                   turnover = as.vector(turnover),
+                   method = rep(method_labels, each = K))
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = turnover, color = method)) +
+    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::labs(x = "k", y = "Median turnover", color = "Method") +
+    ggplot2::theme_minimal(base_size = 14) +
+    ggplot2::theme(plot.title = ggplot2::element_blank(),
+                   legend.position = "bottom",
+                   legend.title = ggplot2::element_text(size = 16),
+                   legend.text = ggplot2::element_text(size = 14),
+                   axis.title = ggplot2::element_text(size = 16),
+                   axis.text = ggplot2::element_text(size = 14))
+  if (!is.null(save_path)) {
+    ggplot2::ggsave(paste0(save_path, ".png"), p, width = 8, height = 5, dpi = 150)
+  }
+  p
+}
+
+#' Plot median weight instability vs k
+#' @export
+plot_weight_instability_empirics <- function(k_grid, instab_L1, instab_L2 = NULL, method_labels = NULL, save_path = NULL) {
+  instab_L1 <- as.matrix(instab_L1)
+  K <- length(k_grid); M <- ncol(instab_L1)
+  if (K != nrow(instab_L1)) stop("k_grid length does not match instability rows.")
+  if (is.null(method_labels)) method_labels <- paste0("Method", seq_len(M))
+  df <- data.frame(k = rep(k_grid, times = M),
+                   L1 = as.vector(instab_L1),
+                   method = rep(method_labels, each = K))
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = L1, color = method)) +
+    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::labs(x = "k", y = "Median weight instability (L1)", color = "Method") +
+    ggplot2::theme_minimal(base_size = 14) +
+    ggplot2::theme(plot.title = ggplot2::element_blank(),
+                   legend.position = "bottom",
+                   legend.title = ggplot2::element_text(size = 16),
+                   legend.text = ggplot2::element_text(size = 14),
+                   axis.title = ggplot2::element_text(size = 16),
+                   axis.text = ggplot2::element_text(size = 14))
+  if (!is.null(instab_L2)) {
+    instab_L2 <- as.matrix(instab_L2)
+    df2 <- data.frame(k = rep(k_grid, times = ncol(instab_L2)),
+                      L2 = as.vector(instab_L2),
+                      method = rep(method_labels, each = K))
+    p <- p + ggplot2::geom_line(data = df2, ggplot2::aes(x = k, y = L2, linetype = "L2"), inherit.aes = FALSE)
+  }
+  if (!is.null(save_path)) {
+    ggplot2::ggsave(paste0(save_path, ".png"), p, width = 8, height = 5, dpi = 150)
+  }
+  p
+}
+
+#' Plot median selection instability vs k
+#' @export
+plot_selection_instability_empirics <- function(k_grid, sel_instab, method_labels = NULL, save_path = NULL) {
+  sel_instab <- as.matrix(sel_instab)
+  K <- length(k_grid); M <- ncol(sel_instab)
+  if (K != nrow(sel_instab)) stop("k_grid length does not match selection instability rows.")
+  if (is.null(method_labels)) method_labels <- paste0("Method", seq_len(M))
+  df <- data.frame(k = rep(k_grid, times = M),
+                   sel = as.vector(sel_instab),
+                   method = rep(method_labels, each = K))
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = sel, color = method)) +
+    ggplot2::geom_line(size = 1) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::labs(x = "k", y = "Median selection instability", color = "Method") +
+    ggplot2::theme_minimal(base_size = 14) +
+    ggplot2::theme(plot.title = ggplot2::element_blank(),
+                   legend.position = "bottom",
+                   legend.title = ggplot2::element_text(size = 16),
+                   legend.text = ggplot2::element_text(size = 14),
+                   axis.title = ggplot2::element_text(size = 16),
+                   axis.text = ggplot2::element_text(size = 14))
+  if (!is.null(save_path)) {
+    ggplot2::ggsave(paste0(save_path, ".png"), p, width = 8, height = 5, dpi = 150)
+  }
+  p
+}
+
 #' Plot OOS SR results
 #' @export
 plot_sr_empirics <- function(k_grid, SR, save_path = NULL) {
