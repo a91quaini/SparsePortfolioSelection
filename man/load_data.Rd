@@ -37,7 +37,8 @@ region. For \code{mebeme}/\code{mebeme_ind}, monthly only.}
 before returning.}
 }
 \value{
-A numeric matrix of returns (DATE column removed; MKT appended if requested; columns optionally shuffled).
+A named list with elements \code{returns} (matrix; DATE removed; factors appended if requested)
+and \code{rf} (risk-free vector aligned to returns rows, if available; otherwise NULL).
 }
 \description{
 Convenience loader for the processed daily or monthly managed-portfolio

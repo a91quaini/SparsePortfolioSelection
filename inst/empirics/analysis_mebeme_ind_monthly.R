@@ -43,12 +43,12 @@ ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
 CHECK_K <- TRUE         # warn if solver returns sparsity different from k
 K_TOL <- 1e-9           # tolerance for nonzero weights when checking sparsity
 K_MIN <- 3
-K_STEP <- 5
+K_STEP <- 10
 K_CAP <- N_ASSETS - 1
 METHOD <- "lasso"        # "lasso" | "elnet" | "miqp"
 REFIT <- FALSE
 PARALLEL <- TRUE
-COMPLETE_ANALYSIS <- FALSE  # if TRUE, run complete analysis (turnover/instability)
+COMPLETE_ANALYSIS <- TRUE  # if TRUE, run complete analysis (turnover/instability)
 
 # Decide filename/label stems (append _refit if refit enabled)
 refit_suffix <- if ((METHOD %in% c("lasso", "elnet") && REFIT) ||
