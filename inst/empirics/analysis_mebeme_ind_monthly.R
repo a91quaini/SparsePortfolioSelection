@@ -75,6 +75,12 @@ N <- min(N_ASSETS, N_full)
 R_all <- R_all[, 1:N, drop = FALSE]
 if (!is.null(rf_vec)) rf_vec <- rf_vec[seq_len(nrow(R_all))]
 
+kg_ref <- NULL  # reference k-grid for combined plots
+sr_list <- list()
+turn_list <- list()
+instab1_list <- list()
+instab2_list <- list()
+selinst_list <- list()
 k_grid <- NULL  # will be set after we know N
 
 # Define parameter lists
@@ -149,6 +155,11 @@ for (W_IN in W_IN_GRID) {
   k_grid <- seq.int(K_MIN, k_max, by = K_STEP)
 
   message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
+  if (is.null(kg_ref)) {
+    kg_ref <- k_grid
+  } else if (!identical(kg_ref, k_grid)) {
+    stop("k_grid differs across W_IN runs; cannot combine plots.")
+  }
 
 # Optional parallel run: set PARALLEL <- TRUE to enable
   if (COMPLETE_ANALYSIS) {
@@ -246,12 +257,16 @@ for (W_IN in W_IN_GRID) {
   message("Saved figure to: ", plot_base, ".png")
 
   if (COMPLETE_ANALYSIS) {
+    sr_list[[length(sr_list) + 1L]] <- SR[, 1]
     # Plot turnover / instabilities if available
     if (!is.null(res$summary$median_turnover)) {
+      turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
       plot_turnover_empirics(k_grid, res$summary$median_turnover, labels = labels,
                              save_path = paste0(plot_base, "_turnover"))
     }
     if (!is.null(res$summary$median_weight_instability_L1)) {
+      instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
+      instab2_list[[length(instab2_list) + 1L]] <- res$summary$median_weight_instability_L2
       plot_weight_instability_empirics(
         k_grid,
         res$summary$median_weight_instability_L1,
@@ -261,6 +276,7 @@ for (W_IN in W_IN_GRID) {
       )
     }
     if (!is.null(res$summary$median_selection_instability)) {
+      selinst_list[[length(selinst_list) + 1L]] <- res$summary$median_selection_instability
       plot_selection_instability_empirics(
         k_grid,
         res$summary$median_selection_instability,
@@ -268,5 +284,30 @@ for (W_IN in W_IN_GRID) {
         save_path = paste0(plot_base, "_selection_instability")
       )
     }
+  }
+}
+
+# Combined plots across W_IN (if multiple)
+if (COMPLETE_ANALYSIS && length(sr_list) >= 2) {
+  comb_labels <- as.character(W_IN_GRID)
+  sr_mat <- do.call(cbind, sr_list)
+  plot_sr_empirics(kg_ref, sr_mat, labels = comb_labels,
+                   save_path = file.path(FIG_DIR, "oos_sr_combined"))
+  if (length(turn_list) == length(sr_list)) {
+    turn_mat <- do.call(cbind, turn_list)
+    plot_turnover_empirics(kg_ref, turn_mat, labels = comb_labels,
+                           save_path = file.path(FIG_DIR, "turnover_combined"))
+  }
+  if (length(instab1_list) == length(sr_list)) {
+    instab1_mat <- do.call(cbind, instab1_list)
+    instab2_mat <- do.call(cbind, instab2_list)
+    plot_weight_instability_empirics(kg_ref, instab1_mat, instab2_mat,
+                                     labels = comb_labels,
+                                     save_path_base = file.path(FIG_DIR, "weight_instability_combined"))
+  }
+  if (length(selinst_list) == length(sr_list)) {
+    sel_mat <- do.call(cbind, selinst_list)
+    plot_selection_instability_empirics(kg_ref, sel_mat, labels = comb_labels,
+                                        save_path = file.path(FIG_DIR, "selection_instability_combined"))
   }
 }
