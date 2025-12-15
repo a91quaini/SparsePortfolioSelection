@@ -41,8 +41,10 @@ OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
 ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
 COMPLETE_ANALYSIS <- FALSE  # if TRUE, run complete analysis (turnover/instability)
+CHECK_K <- TRUE         # warn if solver returns sparsity different from k
+K_TOL <- 1e-9           # tolerance for nonzero weights when checking sparsity
 K_MIN <- 3
-K_STEP <- 2
+K_STEP <- 3
 K_CAP <- N_ASSETS - 1
 METHOD <- "lasso"        # "lasso" | "elnet" | "miqp"
 REFIT <- FALSE
@@ -82,6 +84,14 @@ R_all <- R_all[, keep_idx, drop = FALSE]
 if (!is.null(rf_vec)) rf_vec <- rf_vec[seq_len(nrow(R_all))]
 
 k_grid <- NULL  # defined per run once N is known
+kg_ref <- NULL  # reference k-grid for combined plots
+sr_list <- list()
+turn_list <- list()
+instab1_list <- list()
+instab2_list <- list()
+selinst_list <- list()
+lessk_list <- list()
+lessk_totals <- integer(0)
 
 # Define parameter lists
 alpha_grid = seq(0.30, 1.00, by = 0.05)
@@ -126,14 +136,24 @@ compute_weights_fn <- if (METHOD == "miqp") {
     mu <- colMeans(Rin)
     sigma <- cov_fast(Rin)
     res <- do.call(mve_miqp_search, c(list(mu, sigma, k), miqp_params))
-    list(weights = res$weights, selection = res$selection, status = res$status)
+    wopt <- res$weights
+    if (CHECK_K && !is.null(wopt)) {
+      nz <- sum(abs(wopt) > K_TOL)
+      if (nz != k) warning(sprintf("MIQP returned %d nonzero weights but target k=%d", nz, k))
+    }
+    list(weights = wopt, selection = res$selection, status = res$status)
   }
 } else {
   function(Rin, k) {
     mu <- colMeans(Rin)
     sigma <- cov_fast(Rin)
     res <- do.call(mve_lasso_search, c(list(mu = mu, sigma = sigma, n_obs = nrow(Rin), k = k), lasso_params))
-    list(weights = res$weights, selection = res$selection, status = res$status)
+    wopt <- res$weights
+    if (CHECK_K && !is.null(wopt)) {
+      nz <- sum(abs(wopt) > K_TOL)
+      if (nz != k) warning(sprintf("LASSO returned %d nonzero weights but target k=%d", nz, k))
+    }
+    list(weights = wopt, selection = res$selection, status = res$status)
   }
 }
 
@@ -147,98 +167,73 @@ for (W_IN in W_IN_GRID) {
   message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]", Tobs, N, W_IN, W_OUT, K_MIN, k_max))
 
   # Optional parallel run: set PARALLEL <- TRUE to enable
-  if (COMPLETE_ANALYSIS) {
-    if (PARALLEL) {
-      n_cores <- Nn
-      res <- run_complete_oos_evaluation_parallel(
-        R = R,
-        size_w_in = W_IN,
-        size_w_out = W_OUT,
-        k_grid = k_grid,
-        oos_type = OOS_TYPE,
-        compute_weights_fn = compute_weights_fn,
-        compute_weights_fn_params = list(),
-        rf = rf_vec,
-        sharpe_fn = "median",
-        n_cores = n_cores,
-        return_details = TRUE
-      )
-    } else {
-      res <- run_complete_oos_evaluation(
-        R = R,
-        size_w_in = W_IN,
-        size_w_out = W_OUT,
-        k_grid = k_grid,
-        oos_type = OOS_TYPE,
-        compute_weights_fn = compute_weights_fn,
-        compute_weights_fn_params = list(),
-        rf = rf_vec,
-        sharpe_fn = "median",
-        return_details = TRUE
-      )
-    }
-    SR <- matrix(res$summary$oos_sr, ncol = 1)
-    labels <- METHOD_LABEL
+  if (PARALLEL) {
+    n_cores <- Nn
+    res <- run_complete_oos_evaluation_parallel(
+      R = R,
+      size_w_in = W_IN,
+      size_w_out = W_OUT,
+      k_grid = k_grid,
+      oos_type = OOS_TYPE,
+      compute_weights_fn = compute_weights_fn,
+      compute_weights_fn_params = list(),
+      rf = rf_vec,
+      sharpe_fn = "median",
+      n_cores = n_cores,
+      return_details = TRUE
+    )
   } else {
-    if (PARALLEL) {
-      n_cores <- Nn
-      sr_vec <- run_oos_evaluation_parallel(
-        R = R,
-        size_w_in = W_IN,
-        size_w_out = W_OUT,
-        k_grid = k_grid,
-        oos_type = OOS_TYPE,
-        compute_weights_fn = compute_weights_fn,
-        compute_weights_fn_params = list(),
-        n_cores = n_cores,
-        return_details = FALSE
-      )
-    } else {
-      sr_vec <- run_oos_evaluation(
-        R = R,
-        size_w_in = W_IN,
-        size_w_out = W_OUT,
-        k_grid = k_grid,
-        oos_type = OOS_TYPE,
-        compute_weights_fn = compute_weights_fn,
-        compute_weights_fn_params = list(),
-        return_details = FALSE
-      )
-    }
-
-    SR <- matrix(sr_vec, ncol = 1)
-    labels <- METHOD_LABEL
+    res <- run_complete_oos_evaluation(
+      R = R,
+      size_w_in = W_IN,
+      size_w_out = W_OUT,
+      k_grid = k_grid,
+      oos_type = OOS_TYPE,
+      compute_weights_fn = compute_weights_fn,
+      compute_weights_fn_params = list(),
+      rf = rf_vec,
+      sharpe_fn = "median",
+      return_details = TRUE
+    )
   }
-
-  cat("\n=== Average OOS Sharpe by k ===\n")
-  print_results(k_grid, SR, method_labels = labels, digits = 4)
-
+  SR <- matrix(res$summary$oos_sr, ncol = 1)
+  labels <- METHOD_LABEL
+  less_than_k <- integer(length(k_grid))
+  if (!is.null(res$selections_path)) {
+    for (ik in seq_along(k_grid)) {
+      sels <- res$selections_path[[ik]]
+      if (length(sels) > 0) {
+        nz_counts <- vapply(sels, function(sel) length(sel), integer(1))
+        less_than_k[ik] <- sum(nz_counts < k_grid[ik])
+      }
+    }
+  }
   factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
   mkt_tag <- if (ADD_MKT) "mkt" else "nomkt"
-  stem <- sprintf("oos_sr_%s_monthly_%s_%s_N%d_Win%d_Wout%d",
-                  METHOD_STEM, factors_tag, mkt_tag, N, W_IN, W_OUT)
-  csv_path <- file.path(OUT_DIR, paste0(stem, ".csv"))
-  plot_base <- file.path(FIG_DIR, stem)
-
-  save_results(csv_path, k_grid, SR, method_labels = labels)
-  message("Saved results to: ", csv_path)
-
-  plot_sr_empirics(k_grid, SR, save_path = plot_base)
-  message("Saved figure to: ", plot_base, ".png")
-
-  if (COMPLETE_ANALYSIS) {
-    sr_list[[length(sr_list) + 1L]] <- SR[, 1]
-    if (!is.null(res$summary$median_turnover)) {
-      turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
-    }
-    if (!is.null(res$summary$median_weight_instability_L1)) {
-      instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
-      instab2_list[[length(instab2_list) + 1L]] <- res$summary$median_weight_instability_L2
-    }
-    if (!is.null(res$summary$median_selection_instability)) {
-      selinst_list[[length(selinst_list) + 1L]] <- res$summary$median_selection_instability
-    }
-  }
+  stem_base <- sprintf("combined_oos_%s_%s_%s_%s_%s_Wout%d",
+                       METHOD,
+                       if (REFIT) "refit" else "norefit",
+                       "us",
+                       factors_tag,
+                       mkt_tag,
+                       W_OUT)
+  res_table <- data.frame(
+    k = k_grid,
+    SharpeRatio = SR[, 1],
+    less_than_k = less_than_k,
+    turnover = res$summary$median_turnover,
+    selection_instability = res$summary$median_selection_instability,
+    weight_instability_l1 = res$summary$median_weight_instability_L1,
+    weight_instability_l2 = res$summary$median_weight_instability_L2
+  )
+  write.csv(res_table, file.path(OUT_DIR, paste0(stem_base, "_Win", W_IN, "_sr.csv")), row.names = FALSE)
+  sr_list[[length(sr_list) + 1L]] <- SR[, 1]
+  turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
+  instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
+  instab2_list[[length(instab2_list) + 1L]] <- res$summary$median_weight_instability_L2
+  selinst_list[[length(selinst_list) + 1L]] <- res$summary$median_selection_instability
+  lessk_list[[length(lessk_list) + 1L]] <- less_than_k
+  lessk_totals[length(lessk_totals) + 1L] <- length(res$oos_returns[[1]])
 }
 
 # Combined plots across W_IN (if multiple)
@@ -273,5 +268,11 @@ if (COMPLETE_ANALYSIS && length(sr_list) >= 1) {
     sel_mat <- do.call(cbind, selinst_list)
     plot_selection_instability_empirics(k_grid, sel_mat, labels = comb_labels,
                                         save_path = file.path(FIG_DIR, paste0(base_stem, "_selection_instability")))
+  }
+  if (length(lessk_list) == length(sr_list)) {
+    lessk_mat <- do.call(cbind, lessk_list)
+    plot_less_than_k(k_grid, lessk_mat, labels = comb_labels,
+                     save_path = file.path(FIG_DIR, paste0(base_stem, "_less_than_k")),
+                     total_windows = lessk_totals)
   }
 }
