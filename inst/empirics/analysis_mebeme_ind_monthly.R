@@ -243,11 +243,9 @@ for (W_IN in W_IN_GRID) {
   panel_tag <- if (PANEL_TYPE == "mebeme") "mebeme" else "mebeme_ind"
   factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
   mkt_tag <- if (ADD_MKT) "mkt" else "nomkt"
-  stem_base <- sprintf("oos_%s_%s_monthly_%s_%s_N%d_Win%d_Wout%d",
-                       METHOD_STEM, panel_tag, factors_tag, mkt_tag, N, W_IN, W_OUT)
-  csv_path <- file.path(OUT_DIR, paste0(stem_base, "_sr.csv"))
-  plot_base <- file.path(FIG_DIR, paste0(stem_base, "_sr"))
-
+  stem_base <- sprintf("combined_oos_%s_%s_%s%s_%s_%s_Wout%d",
+                       METHOD, if (REFIT) "refit_" else "", panel_tag, "",
+                       factors_tag, mkt_tag, W_OUT)
   # augment results with less_than_k column
   res_table <- if (COMPLETE_ANALYSIS) {
     data.frame(
@@ -262,64 +260,42 @@ for (W_IN in W_IN_GRID) {
   } else {
     data.frame(k = k_grid, SharpeRatio = SR[, 1], less_than_k = less_than_k)
   }
-  write.csv(res_table, csv_path, row.names = FALSE)
-  message("Saved results to: ", csv_path)
-
-  plot_sr_empirics(k_grid, SR, save_path = plot_base)
-  message("Saved figure to: ", plot_base, ".png")
-
+  sr_list[[length(sr_list) + 1L]] <- SR[, 1]
   if (COMPLETE_ANALYSIS) {
-    sr_list[[length(sr_list) + 1L]] <- SR[, 1]
-    # Plot turnover / instabilities if available
-    if (!is.null(res$summary$median_turnover)) {
-      turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
-      plot_turnover_empirics(k_grid, res$summary$median_turnover, labels = labels,
-                             save_path = file.path(FIG_DIR, paste0(stem_base, "_turnover")))
-    }
+    if (!is.null(res$summary$median_turnover)) turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
     if (!is.null(res$summary$median_weight_instability_L1)) {
       instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
       instab2_list[[length(instab2_list) + 1L]] <- res$summary$median_weight_instability_L2
-      plot_weight_instability_empirics(
-        k_grid,
-        res$summary$median_weight_instability_L1,
-        res$summary$median_weight_instability_L2,
-        labels = labels,
-        save_path_base = file.path(FIG_DIR, paste0(stem_base, "_weight_instability"))
-      )
     }
-    if (!is.null(res$summary$median_selection_instability)) {
-      selinst_list[[length(selinst_list) + 1L]] <- res$summary$median_selection_instability
-      plot_selection_instability_empirics(
-        k_grid,
-        res$summary$median_selection_instability,
-        labels = labels,
-        save_path = file.path(FIG_DIR, paste0(stem_base, "_selection_instability"))
-      )
-    }
+    if (!is.null(res$summary$median_selection_instability)) selinst_list[[length(selinst_list) + 1L]] <- res$summary$median_selection_instability
   }
+  # Save individual CSV (for debugging)
+  write.csv(res_table, file.path(OUT_DIR, paste0(stem_base, "_Win", W_IN, "_sr.csv")), row.names = FALSE)
 }
 
 # Combined plots across W_IN (if multiple)
 if (COMPLETE_ANALYSIS && length(sr_list) >= 2) {
   comb_labels <- as.character(W_IN_GRID)
   sr_mat <- do.call(cbind, sr_list)
+  base_stem <- sprintf("combined_oos_%s_%s%s_%s_%s_Wout%d",
+                       METHOD, if (REFIT) "refit_" else "", panel_tag, factors_tag, mkt_tag, W_OUT)
   plot_sr_empirics(kg_ref, sr_mat, labels = comb_labels,
-                   save_path = file.path(FIG_DIR, "oos_sr_combined"))
+                   save_path = file.path(FIG_DIR, paste0(base_stem, "_sr")))
   if (length(turn_list) == length(sr_list)) {
     turn_mat <- do.call(cbind, turn_list)
     plot_turnover_empirics(kg_ref, turn_mat, labels = comb_labels,
-                           save_path = file.path(FIG_DIR, "turnover_combined"))
+                           save_path = file.path(FIG_DIR, paste0(base_stem, "_turnover")))
   }
   if (length(instab1_list) == length(sr_list)) {
     instab1_mat <- do.call(cbind, instab1_list)
     instab2_mat <- do.call(cbind, instab2_list)
     plot_weight_instability_empirics(kg_ref, instab1_mat, instab2_mat,
                                      labels = comb_labels,
-                                     save_path_base = file.path(FIG_DIR, "weight_instability_combined"))
+                                     save_path_base = file.path(FIG_DIR, paste0(base_stem, "_weight_instability")))
   }
   if (length(selinst_list) == length(sr_list)) {
     sel_mat <- do.call(cbind, selinst_list)
     plot_selection_instability_empirics(kg_ref, sel_mat, labels = comb_labels,
-                                        save_path = file.path(FIG_DIR, "selection_instability_combined"))
+                                        save_path = file.path(FIG_DIR, paste0(base_stem, "_selection_instability")))
   }
 }
