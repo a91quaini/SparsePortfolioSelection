@@ -35,7 +35,7 @@ PANEL_TYPE <- "mebeme"
 MISSINGS <- "median"    # how to treat missing values
 N_ASSETS <- 200         # subset of assets to use: total = 152 (100 + 49 + 3)
 RNG_SEED <- 12345
-W_IN_GRID <- c(360L)  # in-sample lengths (months)
+W_IN_GRID <- c(360L, 480L)  # in-sample lengths (months)
 W_OUT <- 1              # OOS block length (months)
 OOS_TYPE <- "rolling"   # "rolling" or "expanding"
 ADD_MKT <- TRUE         # append MKT-RF
@@ -43,7 +43,7 @@ ADD_FACTORS <- TRUE    # append FF3 (MKT, SMB, HML)
 CHECK_K <- TRUE         # warn if solver returns sparsity different from k
 K_TOL <- 1e-9           # tolerance for nonzero weights when checking sparsity
 K_MIN <- 3
-K_STEP <- 10
+K_STEP <- 20
 K_CAP <- N_ASSETS - 1
 METHOD <- "lasso"        # "lasso" | "elnet" | "miqp"
 REFIT <- FALSE

@@ -2,16 +2,16 @@
 % Please edit documentation in R/utils_empirics.R
 \name{plot_weight_instability_empirics}
 \alias{plot_weight_instability_empirics}
-\title{Plot median weight instability vs k}
+\title{Plot median weight instability (L1) vs k}
 \usage{
 plot_weight_instability_empirics(
   k_grid,
   instab_L1,
-  instab_L2 = NULL,
-  method_labels = NULL,
-  save_path = NULL
+  instab_L2,
+  labels = NULL,
+  save_path_base = NULL
 )
 }
 \description{
-Plot median weight instability vs k
+Plot median weight instability (L1) vs k
 }

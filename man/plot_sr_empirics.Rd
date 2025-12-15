@@ -4,7 +4,7 @@
 \alias{plot_sr_empirics}
 \title{Plot OOS SR results}
 \usage{
-plot_sr_empirics(k_grid, SR, save_path = NULL)
+plot_sr_empirics(k_grid, SR, labels = NULL, save_path = NULL)
 }
 \description{
 Plot OOS SR results

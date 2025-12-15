@@ -7,7 +7,7 @@
 plot_selection_instability_empirics(
   k_grid,
   sel_instab,
-  method_labels = NULL,
+  labels = NULL,
   save_path = NULL
 )
 }

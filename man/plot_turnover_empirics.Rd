@@ -4,12 +4,7 @@
 \alias{plot_turnover_empirics}
 \title{Plot median turnover vs k}
 \usage{
-plot_turnover_empirics(
-  k_grid,
-  turnover,
-  method_labels = NULL,
-  save_path = NULL
-)
+plot_turnover_empirics(k_grid, turnover, labels = NULL, save_path = NULL)
 }
 \description{
 Plot median turnover vs k
