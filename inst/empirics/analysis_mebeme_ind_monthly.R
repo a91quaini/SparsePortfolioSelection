@@ -168,7 +168,7 @@ for (W_IN in W_IN_GRID) {
   if (COMPLETE_ANALYSIS) {
     if (PARALLEL) {
       n_cores <- Nn
-      res <- run_complete_oos_evaluation_parallel(
+    res <- run_complete_oos_evaluation_parallel(
         R = R,
         size_w_in = W_IN,
         size_w_out = W_OUT,
@@ -198,7 +198,7 @@ for (W_IN in W_IN_GRID) {
     SR <- matrix(res$summary$oos_sr, ncol = 1)
     labels <- METHOD_LABEL
     less_than_k <- integer(length(k_grid))
-    win_count <- res$counts[1]  # total OOS points per k
+    win_count <- length(res$oos_returns[[1]])
   } else {
     if (PARALLEL) {
       n_cores <- Nn
@@ -268,7 +268,7 @@ for (W_IN in W_IN_GRID) {
   if (COMPLETE_ANALYSIS) {
     lessk_list[[length(lessk_list) + 1L]] <- less_than_k
     if (is.null(win_count)) {
-      win_count <- length(windows) * W_OUT
+      win_count <- length(res$oos_returns[[1]])
     }
     lessk_totals[length(lessk_totals) + 1L] <- max(1L, win_count)
   }
