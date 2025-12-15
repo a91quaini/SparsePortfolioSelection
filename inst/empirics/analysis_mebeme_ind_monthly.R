@@ -81,6 +81,8 @@ turn_list <- list()
 instab1_list <- list()
 instab2_list <- list()
 selinst_list <- list()
+lessk_list <- list()
+lessk_totals <- integer(0)
 k_grid <- NULL  # will be set after we know N
 
 # Define parameter lists
@@ -262,9 +264,8 @@ for (W_IN in W_IN_GRID) {
   }
   sr_list[[length(sr_list) + 1L]] <- SR[, 1]
   if (COMPLETE_ANALYSIS) {
-    lessk_list <- get0("lessk_list", ifnotfound = list(), envir = parent.env(environment()))
     lessk_list[[length(lessk_list) + 1L]] <- less_than_k
-    assign("lessk_list", lessk_list, envir = parent.env(environment()))
+    lessk_totals[length(lessk_totals) + 1L] <- length(windows)
   }
   if (COMPLETE_ANALYSIS) {
     if (!is.null(res$summary$median_turnover)) turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
@@ -303,10 +304,10 @@ if (COMPLETE_ANALYSIS && length(sr_list) >= 2) {
     plot_selection_instability_empirics(kg_ref, sel_mat, labels = comb_labels,
                                         save_path = file.path(FIG_DIR, paste0(base_stem, "_selection_instability")))
   }
-  if (exists("lessk_list")) {
-    lessk_mat <- do.call(cbind, get("lessk_list", envir = parent.env(environment())))
+  if (length(lessk_list) == length(sr_list)) {
+    lessk_mat <- do.call(cbind, lessk_list)
     plot_less_than_k(kg_ref, lessk_mat, labels = comb_labels,
                      save_path = file.path(FIG_DIR, paste0(base_stem, "_less_than_k")),
-                     total_windows = rep(1, ncol(lessk_mat)))
+                     total_windows = lessk_totals)
   }
 }
