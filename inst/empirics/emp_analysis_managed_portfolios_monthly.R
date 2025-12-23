@@ -21,8 +21,8 @@ N_ASSETS   <- 360L # total = 355
 RNG_SEED   <- 12345
 
 T_IN_GRID  <- c(360L, 480L, 600L)  # in-sample window lengths (months)
-ADD_MKT    <- FALSE
-ADD_FACTORS<- FALSE
+ADD_MKT    <- TRUE
+ADD_FACTORS<- TRUE
 
 K_MIN <- 3L
 K_STEP<- 1L
