@@ -9,8 +9,6 @@ compute_population_mve_sr(
   sigma_pop,
   k_grid,
   n_obs,
-  lasso_nlambda = 300L,
-  lasso_lambda_min_ratio = 1e-04,
   miqp_time_limit = 200,
   miqp_mipgap = 1e-05,
   verbose = FALSE
@@ -25,19 +23,11 @@ compute_population_mve_sr(
 
 \item{n_obs}{Synthetic sample size for moment-based LASSO design.}
 
-\item{lasso_nlambda}{Number of lambdas for boosted LASSO path.}
-
-\item{lasso_lambda_min_ratio}{Smallest lambda fraction for LASSO.}
-
 \item{miqp_time_limit}{Time limit for MIQP (seconds).}
 
 \item{miqp_mipgap}{Relative MIP gap for MIQP.}
 
 \item{verbose}{Logical; pass to MIQP.}
-
-\item{alpha_grid}{Alpha grid for CV (set length>1 to enable).}
-
-\item{R_cv}{Optional returns matrix for alpha CV (moments API).}
 }
 \value{
 Numeric vector of population SRs aligned with k_grid.
@@ -46,8 +36,7 @@ Numeric vector of population SRs aligned with k_grid.
 For each k, compute the population SR using the max of:
 \enumerate{
 \item MIQP (boosted time_limit/mipgap, CPLEX-style bounds),
-\item LASSO with boosted path density,
-\item LASSO with alpha CV (if alpha grid provided and optionally R_cv).
+\item LARS heuristic on the synthetic design.
 Enforces non-decreasing SR in k (SR_k >= SR_{k-1}).
 }
 }

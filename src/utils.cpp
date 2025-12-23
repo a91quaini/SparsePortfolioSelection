@@ -1,108 +1,8 @@
 #include "utils.h"
+#include <string>
+#include <vector>
 #include <algorithm>
 #include <cmath>
-
-// ---- 0) Numerical knobs / utilities ---------------------------------------
-
-arma::mat prep_covariance(const arma::mat& sigma,
-                          double epsilon,
-                          bool stabilize) {
-  if (sigma.n_rows != sigma.n_cols) {
-    Rcpp::stop("sigma must be square");
-  }
-
-  arma::mat A = arma::mat(sigma); // copy to ensure mutability/double
-  const arma::uword n = A.n_rows;
-
-  // Symmetrize in-place: A := (A + A.t()) / 2
-  for (arma::uword j = 0; j < n; ++j) {
-    A(j, j) = 0.5 * (A(j, j) + A(j, j));
-    for (arma::uword i = j + 1; i < n; ++i) {
-      const double s = 0.5 * (A(i, j) + A(j, i));
-      A(i, j) = s;
-      A(j, i) = s;
-    }
-  }
-
-  if (stabilize && epsilon > 0.0) {
-    const double ss = epsilon * (arma::trace(A) / static_cast<double>(n));
-    for (arma::uword i = 0; i < n; ++i) {
-      A(i, i) += ss;
-    }
-  }
-
-  return A;
-}
-
-arma::vec normalize_weights(const arma::vec& w,
-                            const std::string& mode,
-                            double tol,
-                            bool do_checks) {
-  if (do_checks) {
-    if (!(mode == "absolute" || mode == "relative")) {
-      Rcpp::stop("mode must be \"absolute\" or \"relative\"");
-    }
-    if (!w.is_finite()) Rcpp::stop("weights must be finite.");
-    if (!std::isfinite(tol) || tol <= 0.0) {
-      Rcpp::stop("tol must be positive and finite.");
-    }
-  }
-
-  const double s  = arma::accu(w);
-  const double d1 = arma::norm(w, 1);
-
-  const double denom = (mode == "absolute")
-    ? std::max(1e-10, std::max(std::abs(s), tol))
-    : std::max(1e-10, std::max(std::abs(s), tol * d1));
-
-  if (!(denom > 0.0) || !std::isfinite(denom)) {
-    return arma::vec(w.n_elem, arma::fill::zeros);
-  }
-
-  return w / denom;
-}
-
-// [[Rcpp::export]]
-arma::mat prep_covariance_cpp(const arma::mat& sigma,
-                              double epsilon,
-                              bool stabilize) {
-  return prep_covariance(sigma, epsilon, stabilize);
-}
-
-// [[Rcpp::export]]
-arma::vec normalize_weights_cpp(const arma::vec& w,
-                                const std::string& mode,
-                                double tol,
-                                bool do_checks) {
-  return normalize_weights(w, mode, tol, do_checks);
-}
-
-// [[Rcpp::export]]
-double eps_ridge_cpp() {
-  return EPS_RIDGE;
-}
-
-// [[Rcpp::export]]
-arma::mat safe_chol_cpp(const arma::mat& Q,
-                        double base_bump,
-                        unsigned int max_tries) {
-  if (Q.n_rows != Q.n_cols) {
-    Rcpp::stop("Matrix must be square for safe_chol_cpp.");
-  }
-  arma::mat A = Q;
-  const arma::uword n = A.n_rows;
-  const double trA = arma::trace(A);
-  const double tau0 = base_bump * std::max(trA / std::max<double>(n, 1.0), arma::datum::eps);
-  for (unsigned int t = 0; t <= max_tries; ++t) {
-    const double bump = tau0 * std::pow(2.0, static_cast<int>(t));
-    A.diag() += bump;
-    arma::mat U;
-    if (arma::chol(U, A, "upper")) {
-      return U;
-    }
-  }
-  Rcpp::stop("safe_chol_cpp failed after retries.");
-}
 
 // ---- 1) Linear solves ----------------------------------------------------
 
@@ -131,35 +31,92 @@ inline T solve_sympd(const arma::mat& A, const T& b) {
 template arma::vec solve_sympd<arma::vec>(const arma::mat&, const arma::vec&);
 template arma::mat solve_sympd<arma::mat>(const arma::mat&, const arma::mat&);
 
+// Numerical knobs / utilities ---------------------------------------
+// [[Rcpp::export]]
+arma::mat stabilize_sigma_cpp(const arma::mat& sigma,
+                              double ridge_epsilon) {
+
+  if (ridge_epsilon <= 1e-14) {
+    return sigma;
+  }
+
+  arma::mat sigma_ = sigma;
+  for (arma::uword i = 0; i < sigma.n_rows; ++i) {
+    sigma_(i, i) += ridge_epsilon;
+  }
+
+  return sigma_;
+}
+
+// [[Rcpp::export]]
+arma::vec normalize_weights_cpp(const arma::vec& w,
+                                double epsilon,
+                                int type) {
+  // light guard
+  if (!std::isfinite(epsilon) || epsilon <= 0.0) epsilon = 1e-8;
+
+  arma::vec out = w;
+
+  // support inferred from w
+  const arma::uvec sel = arma::find(arma::abs(out) > epsilon);
+  if (sel.n_elem == 0) {
+    return out;
+  }
+
+  if (type == 0) {  // sum-to-one
+    const double sum_w = arma::accu(out(sel));
+    if (!std::isfinite(sum_w) || std::abs(sum_w) <= 0.0) {
+      return out;
+    }
+    out(sel) /= sum_w;
+
+  } else {  // default: L1 norm = 1
+    const double l1norm = arma::accu(arma::abs(out(sel)));
+    if (!std::isfinite(l1norm)) {
+      return out;
+    }
+    out(sel) /= l1norm;
+
+  }
+  return out;
+}
+
+// [[Rcpp::export]]
+arma::mat safe_chol_cpp(const arma::mat& Q,
+                        double ridge_epsilon) {
+
+  // Symmetrize defensively (Cholesky expects symmetric PD)
+  arma::mat Qs = arma::symmatu(Q); // equivalent to 0.5*(Q + Q.t())
+
+  // Optional diagonal stabilization via your helper
+  Qs = stabilize_sigma_cpp(Qs, ridge_epsilon);
+
+  arma::mat U;
+  if (!arma::chol(U, Qs, "upper")) {
+    Rcpp::stop("safe_chol_cpp: Cholesky failed.");
+  }
+  return U; // Qs = U.t() * U
+}
+
 // [[Rcpp::export]]
 Rcpp::List design_from_moments_cpp(const arma::vec& mu,
                                    const arma::mat& sigma,
                                    double n_obs,
-                                   double epsilon,
-                                   bool stabilize_sigma) {
-  const arma::uword N = mu.n_elem;
-  if (sigma.n_rows != sigma.n_cols || sigma.n_rows != N) {
-    Rcpp::stop("sigma must be square and match length(mu).");
-  }
-  if (!(n_obs > 0.0) || !std::isfinite(n_obs)) {
-    Rcpp::stop("n_obs must be positive and finite.");
-  }
+                                   double ridge_epsilon) {
+  // Markowitz (covariance-only) quadratic form:
+  // Q = T * Sigma  (no mu*mu' term)
+  const arma::mat Q = n_obs * sigma;
 
-  const arma::mat sigma_s = prep_covariance(sigma, epsilon, stabilize_sigma);
-  arma::mat Q = n_obs * (sigma_s + mu * mu.t());
+  // Cholesky of symmetrized (and optionally epsilon-stabilized) Q:
+  // returns upper-triangular U such that Qs = U.t() * U
+  const arma::mat U = safe_chol_cpp(Q, ridge_epsilon);
 
-  // Small ridge to keep chol happy if needed
-  double muQ = arma::mean(Q.diag());
-  double tau = std::numeric_limits<double>::epsilon() * (std::isfinite(muQ) && muQ > 0.0 ? muQ : 1.0);
-  Q.diag() += tau;
-
-  arma::mat U;
-  if (!arma::chol(U, Q)) {
-    U = safe_chol_cpp(Q, 1e-10, 8);
-  }
-
-  arma::mat X = U.t();
-  arma::vec y = arma::solve(U, n_obs * mu);
+  // Design:
+  // X'X = U' U = Q
+  // Choose y so that X'y = U' y = T mu  => y solves (U') y = T mu
+  const arma::mat X = U;
+  const arma::vec y = arma::solve(arma::trimatl(U.t()), n_obs * mu,
+                                  arma::solve_opts::fast);
 
   return Rcpp::List::create(
     Rcpp::Named("X") = X,

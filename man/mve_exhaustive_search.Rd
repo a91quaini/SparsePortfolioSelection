@@ -2,19 +2,20 @@
 % Please edit documentation in R/mve_search.R
 \name{mve_exhaustive_search}
 \alias{mve_exhaustive_search}
-\title{Exhaustive search over k-subsets maximizing MVE Sharpe ratio}
+\title{Exhaustive search over k-subsets maximizing Sharpe ratio}
 \usage{
 mve_exhaustive_search(
   mu,
   sigma,
   k,
-  epsilon = eps_ridge_cpp(),
-  stabilize_sigma = TRUE,
-  do_checks = FALSE,
+  ridge_epsilon = 0,
   enumerate_all = TRUE,
   max_samples = 0L,
-  dedup_samples = TRUE,
-  compute_weights = TRUE
+  dedup_samples = FALSE,
+  compute_weights = FALSE,
+  normalize_weights = FALSE,
+  normalization_type = 1L,
+  do_checks = FALSE
 )
 }
 \arguments{
@@ -24,11 +25,7 @@ mve_exhaustive_search(
 
 \item{k}{Target cardinality (1..N).}
 
-\item{epsilon}{Ridge factor for covariance stabilization.}
-
-\item{stabilize_sigma}{Logical; if \code{TRUE}, symmetrize/ridge-stabilize \code{sigma}.}
-
-\item{do_checks}{Logical; if \code{TRUE}, validate inputs.}
+\item{ridge_epsilon}{Ridge factor for covariance stabilization (0 disables).}
 
 \item{enumerate_all}{Logical; \code{TRUE} to enumerate all \eqn{N \choose k};
 \code{FALSE} to sample supports.}
@@ -38,12 +35,18 @@ mve_exhaustive_search(
 \item{dedup_samples}{Logical; ensure sampled supports are distinct.}
 
 \item{compute_weights}{Logical; if \code{TRUE}, return MVE weights for the best subset.}
+
+\item{normalize_weights}{Logical; if \code{TRUE}, normalize weights.}
+
+\item{normalization_type}{Integer; 1 = L1 (default), 0 = sum-to-one.}
+
+\item{do_checks}{Logical; if \code{TRUE}, validate inputs.}
 }
 \value{
 List with \code{selection} (1-based indices), \code{weights}, \code{sr}, \code{status}.
 }
 \description{
 Calls the C++ exhaustive (or sampled) search to find the k-asset subset with
-highest in-sample MVE Sharpe ratio. Covariance is symmetrized/ridged once via
-\code{prep_covariance_cpp} and reused in the loop.
+highest in-sample Sharpe ratio. A ridge term can be applied once to the
+covariance matrix before scoring subsets.
 }

@@ -135,7 +135,7 @@ message(sprintf("Starting OOS run: T=%d, N=%d, W_IN=%d, W_OUT=%d, k ∈ [%d..%d]
 n_threads = 12
 if (PARALLEL) {
   n_cores <- max(1L, parallel::detectCores(logical = TRUE) - 1L)
-  sr_vec <- run_oos_evaluation_parallel(
+  sr_mat <- run_oos_evaluation_parallel(
     R = R,
     size_w_in = W_IN,
     size_w_out = W_OUT,
@@ -147,7 +147,7 @@ if (PARALLEL) {
     return_details = FALSE
   )
 } else {
-  sr_vec <- run_oos_evaluation(
+  sr_mat <- run_oos_evaluation(
     R = R,
     size_w_in = W_IN,
     size_w_out = W_OUT,
@@ -159,6 +159,7 @@ if (PARALLEL) {
   )
 }
 
+sr_vec <- colMeans(sr_mat, na.rm = TRUE)
 SR <- matrix(sr_vec, ncol = 1)
 labels <- METHOD_LABEL
 

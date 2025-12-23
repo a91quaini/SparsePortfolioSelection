@@ -2,7 +2,7 @@
 % Please edit documentation in R/mve_search.R
 \name{mve_miqp_search}
 \alias{mve_miqp_search}
-\title{MIQP heuristic search for sparse MVE selection (Gurobi backend)}
+\title{MIQP heuristic search for sparse selection (Gurobi backend)}
 \usage{
 mve_miqp_search(
   mu,
@@ -21,12 +21,10 @@ mve_miqp_search(
   threads = 1L,
   x_start = NULL,
   v_start = NULL,
-  compute_weights = TRUE,
   normalize_weights = FALSE,
   use_refit = FALSE,
   verbose = FALSE,
-  epsilon = eps_ridge_cpp(),
-  stabilize_sigma = TRUE,
+  ridge_epsilon = 0,
   do_checks = FALSE
 )
 }
@@ -61,8 +59,6 @@ mve_miqp_search(
 
 \item{v_start}{Optional warm-start binaries.}
 
-\item{compute_weights}{Logical; return weights (else zeros).}
-
 \item{normalize_weights}{Logical; if \code{TRUE}, add budget constraint and
 post-scale refit weights.}
 
@@ -70,9 +66,7 @@ post-scale refit weights.}
 
 \item{verbose}{Logical; emit Gurobi output.}
 
-\item{epsilon}{Ridge for covariance stabilization.}
-
-\item{stabilize_sigma}{Logical; symmetrize/ridge-stabilize sigma.}
+\item{ridge_epsilon}{Ridge for covariance stabilization.}
 
 \item{do_checks}{Logical; validate inputs.}
 }

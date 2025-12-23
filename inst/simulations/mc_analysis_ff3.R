@@ -1,4 +1,4 @@
-# Monte Carlo analysis for FF3-style simulations (mirrors MATLAB scripts)
+# Monte Carlo analysis for FF3-style simulations
 
 library(SparsePortfolioSelection)
 
@@ -8,10 +8,10 @@ n_cores <- max(1L, Nn - 1L)
 
 # 1) Simulation parameters
 n_assets <- 100              # [25, 50, 100]
-n_obs_grid <- c(120L, 240L, 480L, 960L)  # allow multiple T (population SR does not depend on T)
+n_obs_grid <- c(120L)#, 240L, 480L, 960L)  # allow multiple T (population SR does not depend on T)
 k_grid <- 2:(n_assets-1)
 n_MC <- 1000                  # 200
-search_method <- "lasso"     # set to "lasso" or "miqp"
+search_method <- "lars"     # set to "lasso", "lars", or "miqp"
 
 # 2) Search function parameters (static across n_obs unless n_obs is needed)
 miqp_params <- list(
@@ -64,11 +64,22 @@ for (n_obs in n_obs_grid) {
   if (search_method == "lasso") {
     mve_search_fn <- mve_lasso_search
     mve_search_fn_params <- lasso_params
+  } else if (search_method == "lars") {
+    mve_search_fn <- mve_lars_search
+    mve_search_fn_params <- list(
+      n_obs = n_obs,
+      stabilize_sigma = FALSE,
+      tol_nnl = 1e-10,
+      compute_weights = TRUE,
+      normalize_weights = FALSE,
+      use_refit = FALSE,
+      do_checks = FALSE
+    )
   } else if (search_method == "miqp") {
     mve_search_fn <- mve_miqp_search
     mve_search_fn_params <- miqp_params
   } else {
-    stop("search_method must be 'lasso' or 'miqp'")
+    stop("search_method must be 'lasso', 'lars', or 'miqp'")
   }
 
   # Monte Carlo runs: simulate returns, compute decomposition terms

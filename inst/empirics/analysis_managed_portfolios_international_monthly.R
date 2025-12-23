@@ -137,7 +137,7 @@ for (W_IN in W_IN_GRID) {
   # Optional parallel run: set PARALLEL <- TRUE to enable
   if (PARALLEL) {
     n_cores <- Nn
-    sr_vec <- run_oos_evaluation_parallel(
+    sr_mat <- run_oos_evaluation_parallel(
       R = R,
       size_w_in = W_IN,
       size_w_out = W_OUT,
@@ -149,7 +149,7 @@ for (W_IN in W_IN_GRID) {
       return_details = FALSE
     )
   } else {
-    sr_vec <- run_oos_evaluation(
+    sr_mat <- run_oos_evaluation(
       R = R,
       size_w_in = W_IN,
       size_w_out = W_OUT,
@@ -161,6 +161,7 @@ for (W_IN in W_IN_GRID) {
     )
   }
 
+  sr_vec <- colMeans(sr_mat, na.rm = TRUE)
   SR <- matrix(sr_vec, ncol = 1)
   labels <- METHOD_LABEL
 

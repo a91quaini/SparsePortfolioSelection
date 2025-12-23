@@ -12,25 +12,23 @@ double compute_sr_cpp(const arma::vec& weights,
                       const arma::vec& mu,
                       const arma::mat& sigma,
                       const arma::uvec& selection,
-                      double epsilon,
-                      bool stabilize_sigma,
-                      bool do_checks);
+                      double ridge_epsilon = 1e-8,
+                      bool do_checks = false);
 
 // Compute SR of the mean–variance efficient portfolio (sqrt(mu' Sigma^{-1} mu)).
 double compute_mve_sr_cpp(const arma::vec& mu,
                           const arma::mat& sigma,
                           const arma::uvec& selection,
-                          double epsilon,
-                          bool stabilize_sigma,
-                          bool do_checks);
+                          double ridge_epsilon = 1e-8,
+                          bool do_checks = false);
 
 // Compute MVE portfolio weights w = Sigma^{-1} mu with optional normalization.
 arma::vec compute_mve_weights_cpp(const arma::vec& mu,
                                   const arma::mat& sigma,
                                   const arma::uvec& selection,
-                                  bool normalize_w,
-                                  double epsilon,
-                                  bool stabilize_sigma,
-                                  bool do_checks);
+                                  double ridge_epsilon = 1e-8,
+                                  bool normalize_weights = false,
+                                  int normalization_type = 1,
+                                  bool do_checks = false);
 
 #endif // SHARPE_RATIO_H

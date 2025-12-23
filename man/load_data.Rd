@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_empirics.R
 \name{load_data}
 \alias{load_data}
-\title{Load managed-portfolio panels (daily or monthly)}
+\title{Load managed-portfolio panels (daily or monthly) + MEBEME panels (monthly)}
 \usage{
 load_data(
   type = "US",
@@ -15,34 +15,30 @@ load_data(
 )
 }
 \arguments{
-\item{type}{Either \code{"US"} (default), \code{"International"}, \code{"mebeme_ind"}, or \code{"mebeme"} to pick the panel.}
+\item{type}{One of: "US", "International", "International6", "International32", "MEBEME", "MEBEME_IND".}
 
-\item{path}{Optional override for the base \code{data} directory.}
+\item{path}{Base \code{data} directory (default "data").}
 
-\item{missing}{How to handle missing values: \code{"keep"} (default), \code{"mean"},
-\code{"median"}, or \code{"remove"} (drop rows with any NA).}
+\item{missing}{How to handle missing values: "keep" (default), "mean", "median", "remove".}
 
-\item{frequency}{Either \code{"daily"} (default) or \code{"monthly"}. Monthly loads
-all managed-portfolio return tables and drops the date column.}
+\item{frequency}{Either "daily" (default) or "monthly".}
 
-\item{add_mkt}{Logical; if \code{TRUE}, append MKT-RF columns. For US panels this
-comes from factors_ff5; for international monthly it appends MKT for each
-region; for \code{mebeme}/\code{mebeme_ind} it comes from factors_ff5_monthly.}
+\item{add_mkt}{Logical; if TRUE, append MKT column (panel-dependent).}
 
-\item{add_factors}{Logical; if \code{TRUE}, append the first three factors (MKT,
-SMB, HML). For international monthly, appends the three factors for each
-region. For \code{mebeme}/\code{mebeme_ind}, monthly only.}
+\item{add_factors}{Logical; if TRUE, append factor columns (panel-dependent).
+\itemize{
+\item For MEBEME/MEBEME_IND: FF5 = (MKT, SMB, HML, RMW, CMA).
+}}
 
-\item{shuffle}{Logical; if \code{TRUE} (default), randomly shuffle asset columns
-before returning.}
+\item{shuffle}{Logical; if TRUE, randomly shuffle asset columns before returning.}
 }
 \value{
-A named list with elements \code{returns} (matrix; DATE removed; factors appended if requested)
-and \code{rf} (risk-free vector aligned to returns rows, if available; otherwise NULL).
+A list: \code{returns} (matrix) and \code{rf} (numeric vector or NULL).
 }
 \description{
-Convenience loader for the processed daily or monthly managed-portfolio
-panels shipped in \verb{data/managed_portfolios_*}. It reads all \code{.rds} files in
-the chosen directory, drops the DATE column, and optionally handles missing
-values.
+Returns a list with:
+\itemize{
+\item returns: matrix (T0 x N) of excess returns (and optionally appended factors)
+\item rf: numeric vector length T0 (or NULL if unavailable)
+}
 }

@@ -222,7 +222,7 @@ for (W_IN in W_IN_GRID) {
     SharpeRatio = SR[, 1],
     less_than_k = less_than_k,
     turnover = res$summary$median_turnover,
-    selection_instability = res$summary$median_selection_instability,
+    selection_instability = res$summary$mean_selection_instability,
     weight_instability_l1 = res$summary$median_weight_instability_L1,
     weight_instability_l2 = res$summary$median_weight_instability_L2
   )
@@ -231,7 +231,7 @@ for (W_IN in W_IN_GRID) {
   turn_list[[length(turn_list) + 1L]] <- res$summary$median_turnover
   instab1_list[[length(instab1_list) + 1L]] <- res$summary$median_weight_instability_L1
   instab2_list[[length(instab2_list) + 1L]] <- res$summary$median_weight_instability_L2
-  selinst_list[[length(selinst_list) + 1L]] <- res$summary$median_selection_instability
+  selinst_list[[length(selinst_list) + 1L]] <- res$summary$mean_selection_instability
   lessk_list[[length(lessk_list) + 1L]] <- less_than_k
   lessk_totals[length(lessk_totals) + 1L] <- length(res$oos_returns[[1]])
 }

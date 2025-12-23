@@ -8,9 +8,9 @@ compute_mve_weights(
   mu,
   sigma,
   selection = integer(),
+  ridge_epsilon = 0,
   normalize_weights = FALSE,
-  epsilon = eps_ridge_cpp(),
-  stabilize_sigma = TRUE,
+  normalization_type = 1L,
   do_checks = FALSE
 )
 }
@@ -22,14 +22,10 @@ compute_mve_weights(
 \item{selection}{Optional integer vector of asset indices (0-based) on which
 to evaluate the Sharpe ratio. Default uses all assets.}
 
+\item{ridge_epsilon}{Ridge stabilization factor.}
+
 \item{normalize_weights}{Logical; if \code{TRUE}, post-scale weights using
 L1-relative normalization.}
-
-\item{epsilon}{Ridge factor passed to \code{prep_covariance_cpp}; defaults to
-\code{eps_ridge_cpp()}.}
-
-\item{stabilize_sigma}{Logical; if \code{TRUE}, symmetrize and ridge-stabilize
-\code{sigma} before computing the ratio.}
 
 \item{do_checks}{Logical; if \code{TRUE}, perform basic input validation.}
 }
@@ -38,6 +34,6 @@ Numeric weight vector of length \eqn{N}.
 }
 \description{
 Solves for the mean–variance efficient weights, optionally normalizing with
-the stable \code{normalize_weights_cpp(mode = "relative")} scaling. Supports
+the stable \code{normalize_weights_cpp()} scaling. Supports
 computing on a subset and zero-filling off-support entries.
 }

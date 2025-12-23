@@ -93,21 +93,41 @@ portfolio_files <- c(
   "Asia_Pacific_ex_Japan_25_Portfolios_ME_INV.csv"    = "returns_apxj_meinv25_int_monthly",
   "Asia_Pacific_ex_Japan_25_Portfolios_ME_OP.csv"     = "returns_apxj_meop25_int_monthly",
   "Asia_Pacific_ex_Japan_25_Portfolios_ME_Prior_12_2.csv" = "returns_apxj_meprior122_int_monthly",
+  "Asia_Pacific_ex_Japan_6_Portfolios_ME_BE-ME.csv"   = "returns_apxj_mebeme6_int_monthly",
+  "Asia_Pacific_ex_Japan_6_Portfolios_ME_INV.csv"     = "returns_apxj_meinv6_int_monthly",
+  "Asia_Pacific_ex_Japan_6_Portfolios_ME_OP.csv"      = "returns_apxj_meop6_int_monthly",
+  "Asia_Pacific_ex_Japan_6_Portfolios_ME_Prior_12_2.csv" = "returns_apxj_meprior6_int_monthly",
+  "Asia_Pacific_ex_Japan_32_Portfolios_ME_BE-ME_OP_2x4x4.csv" = "returns_apxj_mebemeop32_int_monthly",
   # Europe
   "Europe_25_Portfolios_ME_BE-ME.csv"                 = "returns_eu_mebeme25_int_monthly",
   "Europe_25_Portfolios_ME_INV.csv"                   = "returns_eu_meinv25_int_monthly",
   "Europe_25_Portfolios_ME_OP.csv"                    = "returns_eu_meop25_int_monthly",
   "Europe_25_Portfolios_ME_Prior_12_2.csv"            = "returns_eu_meprior122_int_monthly",
+  "Europe_6_Portfolios_ME_BE-ME.csv"                  = "returns_eu_mebeme6_int_monthly",
+  "Europe_6_Portfolios_ME_INV.csv"                    = "returns_eu_meinv6_int_monthly",
+  "Europe_6_Portfolios_ME_OP.csv"                     = "returns_eu_meop6_int_monthly",
+  "Europe_6_Portfolios_ME_Prior_12_2.csv"             = "returns_eu_meprior6_int_monthly",
+  "Europe_32_Portfolios_ME_BE-ME_OP_2x4x4.csv"         = "returns_eu_mebemeop32_int_monthly",
   # Japan
   "Japan_25_Portfolios_ME_BE-ME.csv"                  = "returns_jp_mebeme25_int_monthly",
   "Japan_25_Portfolios_ME_INV.csv"                    = "returns_jp_meinv25_int_monthly",
   "Japan_25_Portfolios_ME_OP.csv"                     = "returns_jp_meop25_int_monthly",
   "Japan_25_Portfolios_ME_Prior_12_2.csv"             = "returns_jp_meprior122_int_monthly",
+  "Japan_6_Portfolios_ME_BE-ME.csv"                   = "returns_jp_mebeme6_int_monthly",
+  "Japan_6_Portfolios_ME_INV.csv"                     = "returns_jp_meinv6_int_monthly",
+  "Japan_6_Portfolios_ME_OP.csv"                      = "returns_jp_meop6_int_monthly",
+  "Japan_6_Portfolios_ME_Prior_12_2.csv"              = "returns_jp_meprior6_int_monthly",
+  "Japan_32_Portfolios_ME_BE-ME_OP_2x4x4.csv"          = "returns_jp_mebemeop32_int_monthly",
   # North America
   "North_America_25_Portfolios_ME_BE-ME.csv"          = "returns_na_mebeme25_int_monthly",
   "North_America_25_Portfolios_ME_INV.csv"            = "returns_na_meinv25_int_monthly",
   "North_America_25_Portfolios_ME_OP.csv"             = "returns_na_meop25_int_monthly",
-  "North_America_25_Portfolios_ME_Prior_12_2.csv"     = "returns_na_meprior122_int_monthly"
+  "North_America_25_Portfolios_ME_Prior_12_2.csv"     = "returns_na_meprior122_int_monthly",
+  "North_America_6_Portfolios_ME_BE-ME.csv"           = "returns_na_mebeme6_int_monthly",
+  "North_America_6_Portfolios_ME_INV.csv"             = "returns_na_meinv6_int_monthly",
+  "North_America_6_Portfolios_ME_OP.csv"              = "returns_na_meop6_int_monthly",
+  "North_America_6_Portfolios_ME_Prior_12_2.csv"       = "returns_na_meprior6_int_monthly",
+  "North_America_32_Portfolios_ME_BE-ME_OP_2x4x4.csv"   = "returns_na_mebemeop32_int_monthly"
 )
 
 factor_files <- c(
@@ -161,7 +181,6 @@ for (f_in in names(factor_files)) {
   if (!rf_built && "RF" %in% names(f_df)) {
     rf_tbl <- rf_from_factors(f_df)
     rf_tbl <- rf_tbl[rf_tbl[[1]] %in% common_dates, , drop = FALSE]
-    rf_tbl <- percent_to_decimal(rf_tbl, from_col = 2)
     saveRDS(rf_tbl, file.path(datadir, "rf_monthly.rds"))
     rf_built <- TRUE
   }

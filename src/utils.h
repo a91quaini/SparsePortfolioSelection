@@ -3,57 +3,37 @@
 #define UTILS_H
 
 #include <RcppArmadillo.h>
-#include <string>
-#include <vector>
 #include <functional>  // <-- needed for std::function
 
 // Set template T, representing both arma::mat or arma::vec in subsequent functions.
 template<typename T>
 T solve_sympd(const arma::mat& A, const T& b);
 
-// ---- 0) Numerical knobs / utilities ---------------------------------------
-
-// Small ridge used to stabilize covariance matrices.
-constexpr double EPS_RIDGE = 1e-6;
+// Numerical knobs / utilities ---------------------------------------
 
 // Symmetrize a covariance matrix and optionally add a ridge term proportional
-// to its average diagonal.
-arma::mat prep_covariance(const arma::mat& sigma,
-                          double epsilon,
-                          bool stabilize);
+// to its average diagonal. Optionally convert to second moments (Sigma + mu mu').
+arma::mat stabilize_sigma_cpp(const arma::mat& sigma,
+                              double ridge_epsilon = 1e-8);
 
-// Normalize a weight vector using either "absolute" (scale by |sum|) or
-// "relative" (scale by max(|sum|, tol * L1)) strategies.
-arma::vec normalize_weights(const arma::vec& w,
-                            const std::string& mode = "relative",
-                            double tol = 1e-6,
-                            bool do_checks = false);
-
-// Rcpp exports
-arma::mat prep_covariance_cpp(const arma::mat& sigma,
-                              double epsilon,
-                              bool stabilize);
-
+// Normalize a weight vector by its L1 norm (gross exposure):
+// identify the support sel = {i : |w_i| > tol}, keep w_out[-sel]=0,
+// and scale w_out[sel] so that sum_i |w_out,i| = 1.
 arma::vec normalize_weights_cpp(const arma::vec& w,
-                                const std::string& mode,
-                                double tol,
-                                bool do_checks);
-
-double eps_ridge_cpp();
+                                double epsilon = 1e-8,
+                                int type = 1);  // type: 0 -> sum-to-1, 1 -> L1=1
 
 // Robust Cholesky with escalating diagonal bump; returns upper-triangular U.
 arma::mat safe_chol_cpp(const arma::mat& Q,
-                        double base_bump = 1e-10,
-                        unsigned int max_tries = 8);
+                        double ridge_epsilon = 1e-8);
 
-// Design builder from moments (used by LASSO path).
+// Design builder from moments (used by LASSO search).
 Rcpp::List design_from_moments_cpp(const arma::vec& mu,
                                    const arma::mat& sigma,
                                    double n_obs,
-                                   double epsilon,
-                                   bool stabilize_sigma);
+                                   double ridge_epsilon = 1e-8);
 
-// ---- 2) Combinations API ------------------------------------------------
+// Combinations API ------------------------------------------------
 
 // Streaming callback type: receives a size-k index vector (0..n-1)
 using CombCallback = std::function<void(const arma::uvec&)>;

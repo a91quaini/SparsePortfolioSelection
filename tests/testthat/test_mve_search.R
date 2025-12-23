@@ -80,94 +80,78 @@ test_that("miqp exactly_k vs banded (requires Gurobi)", {
   expect_true(length(res_banded$selection) <= 2)
 })
 
-test_that("miqp budget/normalize_weights toggles sum=1 (requires Gurobi)", {
+test_that("miqp budget/normalize_weights l1=1 (requires Gurobi)", {
   skip_if_no_gurobi()
   mu <- c(0.05, 0.08, 0.02)
   sigma <- diag(3) * 0.1
   res_budget <- mve_miqp_search(mu, sigma, k = 2, normalize_weights = TRUE, time_limit = 2)
-  expect_lt(abs(sum(res_budget$weights) - 1), 1e-6)
+  expect_lt(abs(sum(abs(res_budget$weights)) - 1), 1e-6)
 })
 
-test_that("lasso search respects k edges", {
-  set.seed(123)
-  R <- matrix(rnorm(200), nrow = 50, ncol = 4)
-  res0 <- mve_lasso_search_from_returns(R, k = 0)
-  expect_equal(res0$selection, integer())
-  expect_equal(res0$weights, numeric(ncol(R)))
-
-  resfull <- mve_lasso_search_from_returns(R, k = ncol(R), compute_weights = TRUE)
-  expect_equal(length(resfull$selection), ncol(R))
-  expect_equal(length(resfull$weights), ncol(R))
-})
-
-test_that("lasso search lambda override and standardize", {
-  set.seed(321)
-  R <- matrix(rnorm(300), nrow = 60, ncol = 5)
-  # small lambda to allow dense solution
-  res <- mve_lasso_search_from_returns(R, k = 3, lambda = exp(seq(0, -4, length.out = 20)),
-                          standardize = TRUE)
-  expect_true(length(res$selection) <= 3)
-})
-
-test_that("lasso search closest-k behavior", {
-  set.seed(42)
-  R <- matrix(rnorm(500), nrow = 100, ncol = 5)
-  res <- mve_lasso_search_from_returns(R, k = 2, nlambda = 50)
-  expect_true(length(res$selection) <= 2)
-  expect_equal(length(res$weights), ncol(R))
-  expect_true(res$status %in% c("LASSO_PATH_EXACT_K", "LASSO_PATH_CLOSEST", "LASSO_PATH_OVER_K"))
-})
-
-test_that("lasso alpha grid with CV selects feasible alpha", {
-  set.seed(4242)
-  R <- matrix(rnorm(400), nrow = 80, ncol = 5)
-  res <- mve_lasso_search_from_returns(R, k = 2, alpha = c(0.2, 0.5, 0.8), n_folds = 3)
-  expect_true(res$alpha %in% c(0.2, 0.5, 0.8))
-  expect_true(length(res$selection) <= 2)
-})
-
-test_that("lasso search densification hits k when possible", {
-  set.seed(777)
-  R <- matrix(rnorm(400), nrow = 80, ncol = 5)
-  res <- mve_lasso_search_from_returns(R, k = 3, nlambda = 20, nadd = 30, nnested = 2)
-  expect_true(length(res$selection) <= 3)
-})
-
-test_that("lasso search normalize_weights path", {
-  set.seed(99)
-  R <- matrix(rnorm(320), nrow = 80, ncol = 4)
-  res <- mve_lasso_search_from_returns(R, k = 2, normalize_weights = TRUE, use_refit = TRUE)
-  expect_equal(length(res$weights), ncol(R))
-  expect_true(abs(sum(res$weights)) > 0 || sum(abs(res$weights)) == 0)
-})
-
-test_that("lasso search different eps/stabilization choices", {
-  set.seed(7)
-  R <- matrix(rnorm(300), nrow = 75, ncol = 4)
-  res1 <- mve_lasso_search_from_returns(R, k = 2, epsilon = 0, stabilize_sigma = FALSE)
-  res2 <- mve_lasso_search_from_returns(R, k = 2, epsilon = 1e-3, stabilize_sigma = TRUE)
-  expect_equal(length(res1$weights), ncol(R))
-  expect_equal(length(res2$weights), ncol(R))
-})
-
-test_that("lasso moment-based path basic run", {
-  mu <- c(0.05, 0.08, 0.02, 0.10)
-  A <- matrix(rnorm(16), 4, 4)
-  sigma <- crossprod(A) + 0.05 * diag(4)
-  res <- mve_lasso_search(mu, sigma, n_obs = 60, k = 2, nlambda = 30, nadd = 20, nnested = 2)
+test_that("lars search basic path", {
+  skip_if_not_installed("lars")
+  mu <- c(0.05, 0.08, 0.02, 0.10, 0.03)
+  A <- matrix(rnorm(25), 5, 5)
+  sigma <- crossprod(A) + 0.1 * diag(5)
+  res <- mve_lars_search(mu, sigma, n_obs = 80, k = 2, do_checks = TRUE)
   expect_true(length(res$selection) <= 2)
   expect_equal(length(res$weights), length(mu))
+  expect_true(is.finite(res$sr))
+  expect_true(res$status %in% c("LARS_OK", "LARS_EXACT_K", "LARS_BELOW_K", "LARS_BELOW_K_FALLBACK", "LARS_DESIGN_FAIL", "LARS_FIT_FAIL"))
 })
 
+test_that("lars search respects k edges", {
+  skip_if_not_installed("lars")
+  mu <- c(0.1, 0.2, 0.15)
+  sigma <- diag(c(0.2, 0.25, 0.18))
 
-test_that("lasso search respects k edges", {
-  set.seed(123)
-  R <- matrix(rnorm(200), nrow = 50, ncol = 4)
-  res0 <- mve_lasso_search_from_returns(R, k = 0)
+  res0 <- mve_lars_search(mu, sigma, n_obs = 40, k = 0, do_checks = TRUE)
   expect_equal(res0$selection, integer())
-  expect_equal(res0$weights, numeric(ncol(R)))
+  expect_equal(res0$weights, numeric(length(mu)))
+  expect_equal(res0$status, "LARS_EMPTY")
 
-  resfull <- mve_lasso_search_from_returns(R, k = ncol(R), compute_weights = TRUE)
-  expect_equal(length(resfull$selection), ncol(R))
-  expect_equal(length(resfull$weights), ncol(R))
+  resfull <- mve_lars_search(mu, sigma, n_obs = 40, k = length(mu), do_checks = TRUE)
+  expect_equal(sort(resfull$selection), 1:length(mu))
+  expect_equal(length(resfull$weights), length(mu))
+  expect_true(resfull$status %in% c("LARS_FULL", "LARS_FULL_FAIL"))
+})
+
+test_that("lars search refit and normalization path", {
+  skip_if_not_installed("lars")
+  set.seed(101)
+  mu <- c(0.05, 0.07, 0.02, 0.11)
+  A <- matrix(rnorm(16), 4, 4)
+  sigma <- crossprod(A) + 0.05 * diag(4)
+  res <- mve_lars_search(mu, sigma, n_obs = 60, k = 2,
+                         use_refit = TRUE, normalize_weights = TRUE, do_checks = TRUE)
+  expect_equal(length(res$weights), length(mu))
+  expect_lt(abs(sum(abs(res$weights)) - 1), 1e-6)
+  expect_true(is.finite(res$sr))
+})
+
+test_that("lars search compute_weights=FALSE yields zero weights", {
+  skip_if_not_installed("lars")
+  set.seed(202)
+  mu <- c(0.04, 0.09, 0.01, 0.08)
+  A <- matrix(rnorm(16), 4, 4)
+  sigma <- crossprod(A) + 0.05 * diag(4)
+  res <- mve_lars_search(mu, sigma, n_obs = 50, k = 2,
+                         compute_weights = FALSE, do_checks = TRUE)
+  expect_true(all(res$weights == 0))
+  expect_true(length(res$selection) <= 2)
+  expect_true(is.na(res$sr))
+})
+
+test_that("lars search normalize_weights without refit scales weights", {
+  skip_if_not_installed("lars")
+  set.seed(303)
+  mu <- c(0.03, 0.06, 0.02, 0.10, 0.05)
+  A <- matrix(rnorm(25), 5, 5)
+  sigma <- crossprod(A) + 0.05 * diag(5)
+  res <- mve_lars_search(mu, sigma, n_obs = 70, k = 3,
+                         normalize_weights = TRUE, use_refit = FALSE, do_checks = TRUE)
+  expect_equal(length(res$weights), length(mu))
+  expect_true(sum(abs(res$weights)) > 0)
+  expect_lt(abs(sum(abs(res$weights)) - 1), 1e-6)
+  expect_true(length(res$selection) <= 3)
 })

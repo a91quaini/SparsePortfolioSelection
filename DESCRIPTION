@@ -17,6 +17,7 @@ LinkingTo:
 Imports: 
     Rcpp,
     glmnet,
+    lars,
     parallel,
     ggplot2
 Suggests: 

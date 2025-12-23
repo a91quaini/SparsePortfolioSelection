@@ -10,20 +10,16 @@
 #' @param sigma Numeric \eqn{N \times N} covariance matrix.
 #' @param selection Optional integer vector of asset indices (0-based) on which
 #'   to evaluate the Sharpe ratio. Default uses all assets.
-#' @param epsilon Ridge factor passed to `prep_covariance_cpp`; defaults to
-#'   `eps_ridge_cpp()`.
-#' @param stabilize_sigma Logical; if `TRUE`, symmetrize and ridge-stabilize
-#'   `sigma` before computing the ratio.
+#' @param ridge_epsilon Ridge stabilization factor.
 #' @param do_checks Logical; if `TRUE`, perform basic input validation.
 #'
 #' @return Scalar Sharpe ratio (NaN if variance is nonpositive or nonfinite).
 #' @export
 compute_sr <- function(w, mu, sigma,
                        selection = integer(),
-                       epsilon = eps_ridge_cpp(),
-                       stabilize_sigma = TRUE,
+                       ridge_epsilon = 0.0,
                        do_checks = FALSE) {
-  compute_sr_cpp(w, mu, sigma, selection, epsilon, stabilize_sigma, do_checks)
+  compute_sr_cpp(w, mu, sigma, selection, ridge_epsilon, do_checks)
 }
 
 #' Compute mean–variance efficient (MVE) Sharpe ratio
@@ -38,16 +34,15 @@ compute_sr <- function(w, mu, sigma,
 #' @export
 compute_mve_sr <- function(mu, sigma,
                            selection = integer(),
-                           epsilon = eps_ridge_cpp(),
-                           stabilize_sigma = TRUE,
+                           ridge_epsilon = 0.0,
                            do_checks = FALSE) {
-  compute_mve_sr_cpp(mu, sigma, selection, epsilon, stabilize_sigma, do_checks)
+  compute_mve_sr_cpp(mu, sigma, selection, ridge_epsilon, do_checks)
 }
 
 #' Compute MVE weights \eqn{w = \Sigma^{-1} \mu}
 #'
 #' Solves for the mean–variance efficient weights, optionally normalizing with
-#' the stable `normalize_weights_cpp(mode = "relative")` scaling. Supports
+#' the stable `normalize_weights_cpp()` scaling. Supports
 #' computing on a subset and zero-filling off-support entries.
 #'
 #' @inheritParams compute_sr
@@ -58,10 +53,11 @@ compute_mve_sr <- function(mu, sigma,
 #' @export
 compute_mve_weights <- function(mu, sigma,
                                 selection = integer(),
+                                ridge_epsilon = 0.0,
                                 normalize_weights = FALSE,
-                                epsilon = eps_ridge_cpp(),
-                                stabilize_sigma = TRUE,
+                                normalization_type = 1L,
                                 do_checks = FALSE) {
-  as.numeric(compute_mve_weights_cpp(mu, sigma, selection, normalize_weights,
-                                     epsilon, stabilize_sigma, do_checks))
+  as.numeric(compute_mve_weights_cpp(mu, sigma, selection, ridge_epsilon,
+                                     normalize_weights, normalization_type,
+                                     do_checks))
 }

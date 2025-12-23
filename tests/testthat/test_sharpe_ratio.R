@@ -146,17 +146,15 @@ test_that("normalize_weights semantics", {
   w0 <- compute_mve_weights(mu, sigma, normalize_weights = FALSE)
   w1 <- compute_mve_weights(mu, sigma, normalize_weights = TRUE)
 
-  denom <- max(abs(sum(w0)), 1e-6 * sum(abs(w0)), 1e-10)
-  expect_true(all.equal(w1, w0 / denom, tolerance = 1e-10) == TRUE)
-  expect_lt(abs(compute_sr(w0, mu, sigma) - compute_sr(w1, mu, sigma)), 1e-10)
+  expect_lt(abs(sum(abs(w1)) - 1), 1e-8)
+  expect_equal(which(abs(w1) > 0), which(abs(w0) > 0))
 
   sel <- sort(sample(seq_len(n), 5)) - 1L
   w_raw <- compute_mve_weights(mu, sigma, selection = sel, normalize_weights = FALSE)
   ws <- compute_mve_weights(mu, sigma, selection = sel, normalize_weights = TRUE)
   expect_true(all(ws[setdiff(seq_len(n), sel + 1L)] == 0))
-  denom_sel <- max(abs(sum(w_raw)), 1e-6 * sum(abs(w_raw)), 1e-10)
-  expect_true(all.equal(ws, w_raw / denom_sel, tolerance = 1e-10) == TRUE)
-  expect_lt(abs(compute_sr(ws, mu, sigma) - compute_sr(w_raw, mu, sigma)), 1e-10)
+  expect_lt(abs(sum(abs(ws)) - 1), 1e-8)
+  expect_equal(which(abs(ws) > 0), sel + 1L)
 })
 
 test_that("stabilize_sigma toggling leaves symmetric matrix unchanged", {

@@ -105,7 +105,7 @@ simulate_ff3 <- function(Tobs, params, do_checks = FALSE) {
 #' @param sigma_sample Sample covariance matrix.
 #' @param k Target cardinality.
 #' @param mve_search_fn Function used to pick the subset on sample moments
-#'   (e.g., `mve_exhaustive_search`, `mve_miqp_search`, `mve_lasso_search_from_returns`).
+#'   (e.g., `mve_exhaustive_search`, `mve_miqp_search`, `mve_lars_search`).
 #' @param mve_search_fn_params List of extra args passed to `mve_search_fn`
 #'   (excluding mu/sigma/k).
 #' @param do_checks Logical; validate inputs.
@@ -119,7 +119,7 @@ compute_mve_sr_decomposition <- function(mu_pop,
                                          mu_sample,
                                          sigma_sample,
                                          k,
-                                         mve_search_fn = mve_exhaustive_search,
+                                         mve_search_fn = mve_lars_search,
                                          mve_search_fn_params = list(),
                                          do_checks = FALSE,
                                          return_selection = FALSE) {
@@ -169,20 +169,15 @@ compute_mve_sr_decomposition <- function(mu_pop,
 #'
 #' For each k, compute the population SR using the max of:
 #' 1) MIQP (boosted time_limit/mipgap, CPLEX-style bounds),
-#' 2) LASSO with boosted path density,
-#' 3) LASSO with alpha CV (if alpha grid provided and optionally R_cv).
+#' 2) LARS heuristic on the synthetic design.
 #' Enforces non-decreasing SR in k (SR_k >= SR_{k-1}).
 #'
 #' @param mu_pop Population mean vector.
 #' @param sigma_pop Population covariance matrix.
 #' @param k_grid Vector of cardinalities.
 #' @param n_obs Synthetic sample size for moment-based LASSO design.
-#' @param alpha_grid Alpha grid for CV (set length>1 to enable).
-#' @param lasso_nlambda Number of lambdas for boosted LASSO path.
-#' @param lasso_lambda_min_ratio Smallest lambda fraction for LASSO.
 #' @param miqp_time_limit Time limit for MIQP (seconds).
 #' @param miqp_mipgap Relative MIP gap for MIQP.
-#' @param R_cv Optional returns matrix for alpha CV (moments API).
 #' @param verbose Logical; pass to MIQP.
 #' @return Numeric vector of population SRs aligned with k_grid.
 #' @export
@@ -190,8 +185,6 @@ compute_population_mve_sr <- function(mu_pop,
                                       sigma_pop,
                                       k_grid,
                                       n_obs,
-                                      lasso_nlambda = 300L,
-                                      lasso_lambda_min_ratio = 1e-4,
                                       miqp_time_limit = 200,
                                       miqp_mipgap = 1e-5,
                                       verbose = FALSE) {
@@ -223,27 +216,25 @@ compute_population_mve_sr <- function(mu_pop,
       as.numeric(res$sr)
     }, error = function(e) -Inf)
 
-    # 2) LASSO boosted (alpha fixed)
-    sr_lasso <- tryCatch({
-      res <- mve_lasso_search(
+    # 2) LARS heuristic
+    sr_lars <- tryCatch({
+      res <- mve_lars_search(
         mu = mu_pop,
         sigma = sigma_pop,
         n_obs = n_obs,
         k = k,
-        nlambda = lasso_nlambda,
-        lambda_min_ratio = lasso_lambda_min_ratio,
-        alpha = 1,
-        nadd = 100L,
-        nnested = 3L,
-        standardize = FALSE,
+        stabilize_sigma = FALSE,
+        epsilon = eps_ridge_cpp(),
+        tol_nnl = 1e-10,
         compute_weights = TRUE,
         normalize_weights = FALSE,
-        use_refit = FALSE
+        use_refit = FALSE,
+        do_checks = FALSE
       )
       as.numeric(res$sr)
     }, error = function(e) -Inf)
 
-    best_sr <- max(sr_miqp, sr_lasso, na.rm = TRUE)
+    best_sr <- max(sr_miqp, sr_lars, na.rm = TRUE)
     if (!is.finite(best_sr)) best_sr <- -Inf
     if (best_sr < prev_sr) best_sr <- prev_sr
     pop_sr[i] <- best_sr

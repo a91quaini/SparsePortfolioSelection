@@ -2,10 +2,10 @@
 % Please edit documentation in R/utils_empirics.R
 \name{print_results}
 \alias{print_results}
-\title{Print OOS SR results}
+\title{Quick console table for results matrices (e.g., Sharpe profiles)}
 \usage{
-print_results(k_grid, SR, method_labels = NULL, digits = 4)
+print_results(k_grid, SR, method_labels = "value", digits = 4)
 }
 \description{
-Print OOS SR results
+Quick console table for results matrices (e.g., Sharpe profiles)
 }

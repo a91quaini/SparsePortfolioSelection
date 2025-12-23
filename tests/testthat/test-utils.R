@@ -41,7 +41,7 @@ assign("factors_ff5", factors_ff5, envir = SparsePortfolioSelection)
 # --- Begin tests ---
 
 test_that("load_data rejects invalid type", {
-  expect_error(load_data(type = "x"), "type must be either 'US' or 'International'")
+  expect_error(load_data(type = "x"), "type must be one of 'US', 'International', 'mebeme_ind', or 'mebeme'")
 })
 
 test_that("load_data('US') returns a matrix with rows/cols > 0", {

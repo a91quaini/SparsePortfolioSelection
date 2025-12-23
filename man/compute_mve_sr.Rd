@@ -8,8 +8,7 @@ compute_mve_sr(
   mu,
   sigma,
   selection = integer(),
-  epsilon = eps_ridge_cpp(),
-  stabilize_sigma = TRUE,
+  ridge_epsilon = 0,
   do_checks = FALSE
 )
 }
@@ -21,11 +20,7 @@ compute_mve_sr(
 \item{selection}{Optional integer vector of asset indices (0-based) on which
 to evaluate the Sharpe ratio. Default uses all assets.}
 
-\item{epsilon}{Ridge factor passed to \code{prep_covariance_cpp}; defaults to
-\code{eps_ridge_cpp()}.}
-
-\item{stabilize_sigma}{Logical; if \code{TRUE}, symmetrize and ridge-stabilize
-\code{sigma} before computing the ratio.}
+\item{ridge_epsilon}{Ridge stabilization factor.}
 
 \item{do_checks}{Logical; if \code{TRUE}, perform basic input validation.}
 }
