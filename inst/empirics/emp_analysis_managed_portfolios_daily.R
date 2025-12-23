@@ -21,11 +21,11 @@ N_ASSETS   <- 290L # total = 277
 RNG_SEED   <- 12345
 
 T_IN_GRID  <- c(360L, 480L, 600L)  # in-sample window lengths (days)
-ADD_MKT    <- FALSE
-ADD_FACTORS<- FALSE
+ADD_MKT    <- TRUE
+ADD_FACTORS<- TRUE
 
 K_MIN <- 3L
-K_STEP<- 1L
+K_STEP<- 3L
 K_CAP <- N_ASSETS - 1L
 
 METHOD <- "lars"
