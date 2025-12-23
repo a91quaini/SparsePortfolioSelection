@@ -39,9 +39,8 @@ pop_sr <- vapply(k_grid, function(k) {
       sigma = sigma_pop,
       n_obs = n_obs_grid[[1]],
       k = k,
-      stabilize_sigma = FALSE,
+      ridge_epsilon = 0.0,
       tol_nnl = 1e-10,
-      compute_weights = TRUE,
       normalize_weights = FALSE,
       use_refit = FALSE,
       do_checks = FALSE
@@ -83,9 +82,8 @@ for (n_obs in n_obs_grid) {
   mve_search_fn <- mve_lars_search
   mve_search_fn_params <- list(
     n_obs = n_obs,
-    stabilize_sigma = FALSE,
+    ridge_epsilon = 0.0,
     tol_nnl = 1e-10,
-    compute_weights = TRUE,
     normalize_weights = FALSE,
     use_refit = FALSE,
     do_checks = FALSE
