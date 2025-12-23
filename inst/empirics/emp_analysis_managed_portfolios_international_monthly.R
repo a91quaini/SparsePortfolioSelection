@@ -1,6 +1,6 @@
 # emp_analysis_managed_portfolios_international_monthly.R
 
-Nn <- 6L
+Nn <- 180L
 if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
   RhpcBLASctl::blas_set_num_threads(1)
   RhpcBLASctl::omp_set_num_threads(1)
@@ -10,15 +10,15 @@ library(SparsePortfolioSelection)
 
 PANEL_TYPE <- "International"
 MISSINGS <- "median"
-N_ASSETS <- 240L         # Total = 140 assets
+N_ASSETS <- 240L         # Total = 200 assets
 RNG_SEED <- 12345
 
-T_IN_GRID <- c(240L, 380L)
+T_IN_GRID <- c(240L, 360L)
 ADD_MKT <- FALSE
 ADD_FACTORS <- FALSE
 
-K_MIN <- 1L
-K_STEP <- 3L
+K_MIN <- 3L
+K_STEP <- 1L
 K_CAP <- N_ASSETS - 1L
 
 METHOD <- "lars"
@@ -63,10 +63,16 @@ solver_factory <- function(T_in) {
   force(T_in)
   function(mu, sigma, k) {
     res <- mve_lars_search(
-      mu = mu, sigma = sigma, n_obs = T_in, k = k,
-      ridge_epsilon = 0.0, tol_nnl = 1e-10,
-      normalize_weights = NORMALIZE, normalization_type = 1L,
-      use_refit = REFIT, do_checks = FALSE
+      mu = mu,
+      sigma = sigma,
+      n_obs = T_in,
+      k = k,
+      ridge_epsilon = 0.0,
+      tol_nnl = 1e-10,
+      normalize_weights = NORMALIZE,
+      normalization_type = 1L,
+      use_refit = REFIT,
+      do_checks = FALSE
     )
     list(weights = res$weights, selection = res$selection, status = res$status)
   }

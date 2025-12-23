@@ -4,7 +4,7 @@
 # Theory-consistent design: h = 1, roll by 1, moments with denominator T_in.
 
 ## ---- thread control: must be at the very top ------------------------------
-Nn <- 6L
+Nn <- 180L
 if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
   RhpcBLASctl::blas_set_num_threads(1)
   RhpcBLASctl::omp_set_num_threads(1)
@@ -17,15 +17,15 @@ library(SparsePortfolioSelection)
 # ---------------------------------------------------------------------
 PANEL_TYPE <- "US"
 MISSINGS   <- "median"
-N_ASSETS   <- 280L # total = 277
+N_ASSETS   <- 290L # total = 277
 RNG_SEED   <- 12345
 
-T_IN_GRID  <- c(480L)  # in-sample window lengths (days)
-ADD_MKT    <- TRUE
-ADD_FACTORS<- TRUE
+T_IN_GRID  <- c(360L, 480L, 600L)  # in-sample window lengths (days)
+ADD_MKT    <- FALSE
+ADD_FACTORS<- FALSE
 
 K_MIN <- 3L
-K_STEP<- 9L
+K_STEP<- 1L
 K_CAP <- N_ASSETS - 1L
 
 METHOD <- "lars"
@@ -58,7 +58,7 @@ if (is.null(rf_vec)) rf_vec <- rep(0, nrow(R_all))
 
 k_grid <- sps_make_k_grid(N, k_min = K_MIN, k_step = K_STEP, k_cap = K_CAP)
 
-panel_tag   <- "us_daily"
+panel_tag   <- PANEL_TYPE
 factors_tag <- if (ADD_FACTORS) "ff3" else "nofactors"
 mkt_tag     <- if (ADD_MKT) "mkt" else "nomkt"
 stem_base   <- sps_make_stem_base(
@@ -80,7 +80,7 @@ solver_factory <- function(T_in) {
   function(mu, sigma, k) {
     res <- mve_lars_search(
       mu = mu, sigma = sigma, n_obs = T_in, k = k,
-      ridge_epsilon   = 1e-8,
+      ridge_epsilon   = 0.0,
       tol_nnl         = 1e-10,
       normalize_weights   = NORMALIZE,
       normalization_type  = 1L,
