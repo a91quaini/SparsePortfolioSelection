@@ -6,7 +6,7 @@
 #       run_empirical_suite_h1(), print_results(), plot_empirical_suite_h1().
 
 ## ---- thread control: must be at the very top ------------------------------
-N_CORES <- 180L
+N_CORES <- 6L
 if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
   RhpcBLASctl::blas_set_num_threads(1)
   RhpcBLASctl::omp_set_num_threads(1)

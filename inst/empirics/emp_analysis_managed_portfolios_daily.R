@@ -29,12 +29,12 @@ ADD_MKT     <- FALSE
 ADD_FACTORS <- FALSE
 
 K_MIN  <- 3L
-K_STEP <- 3L
+K_STEP <- 2L
 K_CAP_REQUEST <- NA_integer_        # NA => cap at N-1
 
 METHOD    <- "lars"
 REFIT     <- FALSE
-NORMALIZE <- TRUE
+NORMALIZE <- FALSE
 
 ANNUALIZE <- TRUE
 FREQUENCY <- "daily"

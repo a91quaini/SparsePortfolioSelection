@@ -6,21 +6,22 @@ library(SparsePortfolioSelection)
 
 # ---- User configuration ---------------------------------------------------
 # Directory under inst/empirics/results where the CSVs live
-RESULTS_SUBDIR <- "managed_portfolios_international_monthly" # "mebeme_ind_monthly"
+RESULTS_SUBDIR <- "managed_portfolios_daily" # "mebeme_ind_monthly"
 
 # Filenames to combine (relative to RESULTS_SUBDIR)
 FILES <- c(
-  "oos_lars_nonorm_International_ff3_mkt_N212_h1_Tin240.csv",
-  "oos_lars_nonorm_International_ff3_mkt_N212_h1_Tin360.csv"
+  "oos_lars_norm_US_nofactors_nomkt_N274_h1_Tin360.csv",
+  "oos_lars_norm_US_nofactors_nomkt_N277_h1_Tin480.csv",
+  "oos_lars_norm_US_nofactors_nomkt_N277_h1_Tin600.csv"
 )
 
 # Labels for the legend (same order/length as FILES)
-LABELS <- c("240", "360")
+LABELS <- c("360", "480", "600")
 
 # Base stem for saved figures (do NOT include metric or extension);
 # each metric appends _sr, _turnover, _weight_instability(_l1/_l2),
 # _selection_instability.
-FIG_STEM <- "oos_lars_nonorm_International_ff3_mkt_N212_h1"
+FIG_STEM <- "oos_lars_norm_US_nofactors_nomkt_N277_h1"
 
 # ---- No edits below -------------------------------------------------------
 

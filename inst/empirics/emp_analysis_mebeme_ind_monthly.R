@@ -19,16 +19,16 @@ library(SparsePortfolioSelection)
 # ---------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------
-DATA_TYPE  <- "mebeme"  # load_data() key
-PANEL_TAG  <- "mebeme"  # for file stems/tags
+DATA_TYPE  <- "mebeme_ind"  # load_data() key
+PANEL_TAG  <- "mebeme_ind"  # for file stems/tags
 
 MISSINGS   <- "median"
 N_ASSETS_REQUEST <- NA_integer_   # NA => use all available assets
 RNG_SEED   <- 12345
 
 T_IN_GRID   <- c(240L, 360L, 480L)   # in-sample window lengths (months)
-ADD_MKT     <- FALSE
-ADD_FACTORS <- FALSE
+ADD_MKT     <- TRUE
+ADD_FACTORS <- TRUE
 
 K_MIN  <- 3L
 K_STEP <- 1L
@@ -36,9 +36,9 @@ K_CAP_REQUEST <- NA_integer_        # NA => cap at N-1
 
 METHOD    <- "lars"
 REFIT     <- FALSE
-NORMALIZE <- FALSE
+NORMALIZE <- TRUE
 
-ANNUALIZE <- TRUE
+ANNUALIZE <- FALSE
 FREQUENCY <- "monthly"
 
 OUT_DIR <- file.path("inst", "empirics", "results",  "mebeme_ind_monthly")

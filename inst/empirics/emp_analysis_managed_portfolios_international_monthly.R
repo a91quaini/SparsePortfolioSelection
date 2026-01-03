@@ -6,7 +6,7 @@
 #       run_empirical_suite_h1(), print_results(), plot_empirical_suite_h1().
 
 ## ---- thread control: must be at the very top ------------------------------
-N_CORES <- 180L
+N_CORES <- 6L
 if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
   RhpcBLASctl::blas_set_num_threads(1)
   RhpcBLASctl::omp_set_num_threads(1)
@@ -21,7 +21,7 @@ DATA_TYPE <- "International"  # load_data() key
 PANEL_TAG <- "International"  # for file stems/tags
 
 MISSINGS <- "median"
-N_ASSETS_REQUEST <- 240L      # total currently ~200; will cap automatically
+N_ASSETS_REQUEST <- 220L      # total currently ~200; will cap automatically
 RNG_SEED <- 12345
 
 T_IN_GRID   <- c(240L, 360L)  # in-sample window lengths (months)
@@ -34,7 +34,7 @@ K_CAP_REQUEST <- NA_integer_  # NA => cap at N-1
 
 METHOD    <- "lars"
 REFIT     <- FALSE
-NORMALIZE <- TRUE
+NORMALIZE <- FALSE
 
 ANNUALIZE <- TRUE
 FREQUENCY <- "monthly"
