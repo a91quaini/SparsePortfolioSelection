@@ -16,7 +16,7 @@ simulate_ff3(Tobs, params, do_checks = FALSE)
 \item{N}{Number of assets.}
 }
 \value{
-List with \code{mu_true}, \code{Sigma_true}, \code{returns}, \code{alpha_true}, \code{beta_true}.
+List with \code{returns} and \code{factors}.
 }
 \description{
 Generates asset-specific alphas/betas around fixed means, simulates factor

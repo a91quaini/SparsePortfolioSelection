@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_empirics.R
 \name{run_empirical_design_h1}
 \alias{run_empirical_design_h1}
-\title{Run theory-consistent empirical design for h=1 (monthly rebalancing)}
+\title{Run theory-consistent empirical design for h=1 (monthly/daily rebalancing)}
 \usage{
 run_empirical_design_h1(
   R_excess,
@@ -12,6 +12,7 @@ run_empirical_design_h1(
   compute_weights_fn,
   tol_turnover = 1e-12,
   annualize = TRUE,
+  frequency = c("monthly", "daily"),
   on_error = c("stop", "skip"),
   return_paths = FALSE,
   parallel = FALSE,
@@ -19,38 +20,14 @@ run_empirical_design_h1(
   parallel_backend = c("auto", "fork", "psock")
 )
 }
-\arguments{
-\item{R_excess}{T0 x N matrix of excess returns.}
-
-\item{rf}{NULL, scalar, or length-T0 vector of risk-free rates (needed only for turnover).}
-
-\item{T_in}{In-sample window length.}
-
-\item{k_grid}{Integer vector of k values.}
-
-\item{compute_weights_fn}{Function(mu, sigma, k) returning at least \verb{$weights}.}
-
-\item{tol_turnover}{Tolerance for the pre-trade normalization denominator.}
-
-\item{annualize}{If TRUE, multiply monthly Sharpe by sqrt(12).}
-
-\item{parallel}{If TRUE, parallelize over rebalancing dates.}
-
-\item{n_cores}{Number of cores when parallel=TRUE.}
-
-\item{parallel_backend}{"auto", "fork", or "psock".}
-}
-\value{
-data.frame with k-level summaries.
-}
 \description{
 Windows end at t = T_in,...,T0-1, weights formed at end of t and held over t+1.
 Moments use denominator T_in:
-mu_t = (1/T_in) sum r_s
+mu_t    = (1/T_in) sum r_s
 Sigma_t = (1/T_in) sum r_s r_s' - mu_t mu_t'
 }
 \details{
-\code{compute_weights_fn} must be a function of the form:
-compute_weights_fn(mu, sigma, k) -> list(weights=..., selection=..., status=...)
-(You should pre-bind any solver parameters via a closure.)
+compute_weights_fn can be either:
+(A) vectorized: compute_weights_fn(mu, sigma, k_grid) returning list-of-K OR matrix
+(B) scalar:     compute_weights_fn(mu, sigma, k) returning list for one k
 }

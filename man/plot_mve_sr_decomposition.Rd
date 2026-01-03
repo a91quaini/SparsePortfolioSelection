@@ -8,14 +8,18 @@ plot_mve_sr_decomposition(results, save = FALSE)
 }
 \arguments{
 \item{results}{List with fields \code{population_sr}, \code{est_terms}, \code{sel_terms},
-and \code{config} (including \code{k_grid}, \code{n_assets}, \code{n_obs}, \code{search_method}).}
+optionally \code{span_terms}, and \code{config} (including \code{k_grid}, \code{n_assets}, \code{n_obs},
+\code{search_method}).}
 
 \item{save}{Logical; if TRUE, save plots to \code{inst/simulations/figures}.}
 }
 \value{
-A list with \code{sr_plot} and \code{risk_plot} ggplot objects.
+A list with \code{sr_plot}, \code{risk_plot}, \code{loss_plot}, \code{sample_sr},
+and optionally \code{span_plot}.
 }
 \description{
 Expects the list saved by \code{inst/simulations/mc_analysis_ff3.R} containing
 \code{population_sr}, \code{est_terms}, and \code{sel_terms}, along with the config.
+If \code{span_terms} is present, also plots the average SpanSR index.
+Additionally plots percentiles of the Sample(k) curve.
 }

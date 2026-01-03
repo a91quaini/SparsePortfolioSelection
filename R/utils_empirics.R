@@ -531,32 +531,38 @@ load_data <- function(type = "US", path = "data", missing = "keep",
 
 }
 
+# PCA loadings from second moments Q = (R'R)/T, returns N x m matrix
+.sps_pca_loadings_second_moment <- function(Rin, m = 5L) {
+  Rin <- as.matrix(Rin)
+  N <- ncol(Rin); Tn <- nrow(Rin)
+  if (Tn < 2L || N < 1L) return(NULL)
+  m <- as.integer(m)
+  m <- max(1L, min(m, N))
+
+  Q <- crossprod(Rin) / Tn
+  eig <- eigen(Q, symmetric = TRUE)
+
+  ord <- order(eig$values, decreasing = TRUE)
+  V <- eig$vectors[, ord, drop = FALSE]
+  V[, seq_len(m), drop = FALSE]
+}
+
+
 # =============================================================================
 # Core empirical evaluation (theory-consistent h=1, roll by 1)
 # =============================================================================
 
-#' Run theory-consistent empirical design for h=1 (monthly rebalancing)
+#' Run theory-consistent empirical design for h=1 (monthly/daily rebalancing)
 #'
 #' Windows end at t = T_in,...,T0-1, weights formed at end of t and held over t+1.
 #' Moments use denominator T_in:
-#'   mu_t = (1/T_in) sum r_s
+#'   mu_t    = (1/T_in) sum r_s
 #'   Sigma_t = (1/T_in) sum r_s r_s' - mu_t mu_t'
 #'
-#' `compute_weights_fn` must be a function of the form:
-#'   compute_weights_fn(mu, sigma, k) -> list(weights=..., selection=..., status=...)
-#' (You should pre-bind any solver parameters via a closure.)
+#' compute_weights_fn can be either:
+#'   (A) vectorized: compute_weights_fn(mu, sigma, k_grid) returning list-of-K OR matrix
+#'   (B) scalar:     compute_weights_fn(mu, sigma, k) returning list for one k
 #'
-#' @param R_excess T0 x N matrix of excess returns.
-#' @param rf NULL, scalar, or length-T0 vector of risk-free rates (needed only for turnover).
-#' @param T_in In-sample window length.
-#' @param k_grid Integer vector of k values.
-#' @param compute_weights_fn Function(mu, sigma, k) returning at least `$weights`.
-#' @param tol_turnover Tolerance for the pre-trade normalization denominator.
-#' @param annualize If TRUE, multiply monthly Sharpe by sqrt(12).
-#' @param parallel If TRUE, parallelize over rebalancing dates.
-#' @param n_cores Number of cores when parallel=TRUE.
-#' @param parallel_backend "auto", "fork", or "psock".
-#' @return data.frame with k-level summaries.
 #' @export
 run_empirical_design_h1 <- function(
     R_excess,
@@ -566,18 +572,20 @@ run_empirical_design_h1 <- function(
     compute_weights_fn,
     tol_turnover = 1e-12,
     annualize = TRUE,
+    frequency = c("monthly", "daily"),
     on_error = c("stop", "skip"),
     return_paths = FALSE,
     parallel = FALSE,
     n_cores = 1L,
     parallel_backend = c("auto", "fork", "psock")
 ) {
-  parallel_backend <- match.arg(parallel_backend)
+  frequency <- match.arg(frequency)
   on_error <- match.arg(on_error)
+  parallel_backend <- match.arg(parallel_backend)
 
   R_excess <- as.matrix(R_excess)
   T0 <- nrow(R_excess)
-  N <- ncol(R_excess)
+  N  <- ncol(R_excess)
 
   if (T0 < 3L || N < 1L) stop("R_excess must be T0 x N with T0>=3, N>=1.")
   T_in <- as.integer(T_in)
@@ -592,55 +600,109 @@ run_empirical_design_h1 <- function(
   rf_vec <- .sps_as_rf_vec(rf, T0)
   have_rf <- !is.null(rf_vec)
 
-  # rebalancing dates t = T_in,...,T0-1
+  # rebalance dates t = T_in,...,T0-1 (hold over t+1)
   t_grid <- T_in:(T0 - 1L)
   n_reb <- length(t_grid)
 
-  # store OOS returns as n_reb x K
+  # OOS returns: one-step ahead, one per rebalance date
   r_oos <- matrix(NA_real_, nrow = n_reb, ncol = K)
 
-
-  # optionally store paths (weights/supports over time)
+  # optional paths
   if (isTRUE(return_paths)) {
     W_path <- vector("list", n_reb)
     S_path <- vector("list", n_reb)
     Status_path <- vector("list", n_reb)
   }
-  # running previous weights/supports for instability + turnover
+
+  # previous weights/support for turnover/instability
   prev_w <- matrix(NA_real_, nrow = K, ncol = N)
   prev_s <- vector("list", K)
 
-  # metrics series (length n_reb-1)
-  TO_mat <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
-  dW1_mat <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
-  dW2_mat <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
+  TO_mat   <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
+  dW1_mat  <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
+  dW2_mat  <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
   dSel_mat <- matrix(NA_real_, nrow = max(0L, n_reb - 1L), ncol = K)
 
-
-  # cardinality check: count windows where nnz(weights) != k
   nnz_mismatch_count <- integer(K)
 
-  # worker: compute (mu,Sigma) for window ending at t, then solve for all k_grid
-  worker_one <- function(j) {
-    t <- t_grid[j]
-    Rin <- R_excess[(t - T_in + 1L):t, , drop = FALSE]
-    mu_t <- colMeans(Rin)
-    Sigma_t <- (crossprod(Rin) / T_in) - tcrossprod(mu_t)
+  # ---- local parsers (robust to vectorized vs scalar solver output) ----
+  parse_one <- function(out_one) {
+    # out_one can be list(weights=..., selection=..., status=...) or a raw weight vector
+    w <- NULL
+    sel <- NULL
+    status <- "OK"
 
+    if (is.list(out_one)) {
+      if (!is.null(out_one$status)) status <- as.character(out_one$status)[1]
+      if (!is.null(out_one$weights)) w <- out_one$weights
+      if (!is.null(out_one$selection)) sel <- out_one$selection
+    } else {
+      w <- out_one
+    }
+
+    w <- as.numeric(w)
+    if (length(w) != N || any(!is.finite(w))) w <- rep(NA_real_, N)
+
+    if (is.null(sel)) {
+      sel <- which(is.finite(w) & abs(w) > 0)
+    }
+    sel <- as.integer(sel)
+
+    list(w = w, sel = sel, status = status)
+  }
+
+  solve_all_k <- function(mu_t, Sigma_t) {
+    # First try vectorized call
     out <- tryCatch(
       compute_weights_fn(mu = mu_t, sigma = Sigma_t, k = k_grid),
       error = function(e) e
     )
 
-    if (inherits(out, "error")) {
-      if (on_error == "stop") stop(out)
-      Wbad <- matrix(NA_real_, nrow = K, ncol = N)
-      Selbad <- replicate(K, integer(0), simplify = FALSE)
-      return(list(W = Wbad, Sel = Selbad, Status = rep("ERROR", K)))
+    if (!inherits(out, "error")) {
+      parsed <- tryCatch(.sps_parse_solver_output_vectorized(out, N = N, K = K),
+                         error = function(e) NULL)
+      if (is.list(parsed) && is.matrix(parsed$W) && all(dim(parsed$W) == c(K, N))) {
+        return(list(W = parsed$W, Sel = parsed$Sel, Status = parsed$Status))
+      }
     }
 
-    parsed <- .sps_parse_solver_output_vectorized(out, N = N, K = K)
-    list(W = parsed$W, Sel = parsed$Sel, Status = parsed$Status)
+    # Fallback: loop over k scalars
+    W <- matrix(NA_real_, nrow = K, ncol = N)
+    Sel <- vector("list", K)
+    Status <- character(K)
+
+    for (ik in seq_len(K)) {
+      k <- k_grid[ik]
+      out_one <- tryCatch(
+        compute_weights_fn(mu = mu_t, sigma = Sigma_t, k = k),
+        error = function(e) e
+      )
+      if (inherits(out_one, "error")) {
+        if (on_error == "stop") stop(out_one)
+        W[ik, ] <- NA_real_
+        Sel[[ik]] <- integer(0)
+        Status[ik] <- "ERROR"
+      } else {
+        po <- parse_one(out_one)
+        W[ik, ] <- po$w
+        Sel[[ik]] <- po$sel
+        Status[ik] <- po$status
+      }
+    }
+
+    list(W = W, Sel = Sel, Status = Status)
+  }
+
+  # ---- worker for each rebalance date j (parallelizable) ----
+  worker_one <- function(j) {
+    t <- t_grid[j]
+    Rin <- R_excess[(t - T_in + 1L):t, , drop = FALSE]
+
+    mu_t <- colMeans(Rin)
+    Sigma_t <- (crossprod(Rin) / T_in) - tcrossprod(mu_t)
+
+    sol <- solve_all_k(mu_t, Sigma_t)
+    list(W = sol$W, Sel = sol$Sel, Status = sol$Status)
   }
 
   use_parallel <- isTRUE(parallel) && n_cores > 1L && n_reb >= 2L
@@ -655,42 +717,41 @@ run_empirical_design_h1 <- function(
   } else {
     cl <- parallel::makeCluster(n_cores)
     on.exit(parallel::stopCluster(cl), add = TRUE)
-    parallel::clusterEvalQ(cl, {
-      library(SparsePortfolioSelection)
-      if (requireNamespace("lars", quietly = TRUE)) library(lars)
-      NULL
-    })
+    parallel::clusterEvalQ(cl, { library(SparsePortfolioSelection); NULL })
     parallel::clusterExport(
       cl,
-      varlist = c("R_excess", "T_in", "t_grid", "k_grid", "K", "N",
-                  "compute_weights_fn", "worker_one", ".sps_parse_solver_output_vectorized"),
+      varlist = c(
+        "R_excess", "T_in", "t_grid", "k_grid", "K", "N",
+        "compute_weights_fn", "tol_turnover", "rf_vec", "have_rf",
+        "solve_all_k", "parse_one",
+        ".sps_parse_solver_output_vectorized",
+        ".sps_as_rf_vec", ".sps_jaccard_dist", ".sps_pre_trade_weights",
+        ".sps_nnz_mismatch_vec"
+      ),
       envir = environment()
     )
     res_list <- parallel::parLapply(cl, seq_len(n_reb), worker_one)
   }
 
-  # combine + compute OOS returns + metrics in time order
+  # ---- combine sequentially to compute turnover/instability ----
   for (j in seq_len(n_reb)) {
     t <- t_grid[j]
     r_next <- R_excess[t + 1L, , drop = TRUE]
 
     res <- res_list[[j]]
-    Wj <- res$W           # K x N
-    Selj <- res$Sel       # list length K
+    Wj <- res$W
+    Selj <- res$Sel
 
-
-    # check cardinality for this window (counts solver outputs with nnz != k)
     nnz_mismatch_count <- nnz_mismatch_count + .sps_nnz_mismatch_vec(Wj, k_grid)
 
-    # OOS return: w_t' r_{t+1}
+    # OOS portfolio returns (one-step ahead)
+    r_oos[j, ] <- as.numeric(Wj %*% r_next)
 
     if (isTRUE(return_paths)) {
       W_path[[j]] <- Wj
       S_path[[j]] <- Selj
       Status_path[[j]] <- res$Status
     }
-
-    r_oos[j, ] <- as.numeric(Wj %*% r_next)
 
     if (j == 1L) {
       prev_w[,] <- Wj
@@ -708,7 +769,6 @@ run_empirical_design_h1 <- function(
       dSel_mat[j - 1L, ik] <- .sps_jaccard_dist(prev_s[[ik]], Selj[[ik]])
 
       if (have_rf) {
-        # turnover at time t (rebalance end of t): uses returns at time t
         w_pre <- .sps_pre_trade_weights(w_prev, R_excess[t, ], rf_vec[t], tol = tol_turnover)
         TO_mat[j - 1L, ik] <- if (any(!is.finite(w_pre))) NA_real_ else sum(abs(w_curr - w_pre))
       }
@@ -718,8 +778,11 @@ run_empirical_design_h1 <- function(
     prev_s <- Selj
   }
 
-  sharpe_monthly <- apply(r_oos, 2L, .sps_sharpe_oos)
-  sharpe_oos <- if (isTRUE(annualize)) sharpe_monthly * sqrt(12) else sharpe_monthly
+  # ---- OOS Sharpe (base frequency, not annualized) ----
+  sharpe_base <- apply(r_oos, 2L, .sps_sharpe_oos)
+
+  ann_factor <- if (frequency == "daily") sqrt(252) else sqrt(12)
+  sharpe_oos <- if (isTRUE(annualize)) sharpe_base * ann_factor else sharpe_base
 
   summary_df <- data.frame(
     T_in = T_in,
@@ -739,7 +802,8 @@ run_empirical_design_h1 <- function(
         W = W_path,
         S = S_path,
         Status = Status_path,
-        t_grid = t_grid
+        t_grid = t_grid,
+        r_oos = r_oos
       )
     ))
   }
@@ -846,9 +910,10 @@ sps_stack_metric <- function(summaries, metric_col, k_grid) {
 #' Run multiple T_in values, save CSVs, and return stacked matrices for plotting
 #'
 #' @param solver_factory function(T_in) -> compute_weights_fn(mu, sigma, k).
+#' @param align_oos if "end", evaluate all T_in over the same OOS window of length T0 - max(T_in_grid)
 #' @param out_dir if not NULL, saves per-T_in CSVs there.
 #' @param stem_base filename stem (required if out_dir is not NULL).
-#' @return list(k_grid, labels, summaries, mats)
+#' @return list(k_grid, labels, summaries, mats, checks(, paths))
 #' @export
 run_empirical_suite_h1 <- function(R_excess,
                                    rf = NULL,
@@ -856,14 +921,16 @@ run_empirical_suite_h1 <- function(R_excess,
                                    k_grid,
                                    solver_factory,
                                    annualize = TRUE,
+                                   frequency = c("monthly", "daily"),
                                    return_paths = FALSE,
                                    out_dir = NULL,
                                    stem_base = NULL,
                                    verbose = TRUE,
+                                   align_oos = c("none", "end"),
                                    ...) {
 
   R_excess <- as.matrix(R_excess)
-  T0 <- nrow(R_excess)
+  T0_full <- nrow(R_excess)
   N <- ncol(R_excess)
 
   T_in_grid <- as.integer(T_in_grid)
@@ -871,35 +938,68 @@ run_empirical_suite_h1 <- function(R_excess,
   k_grid <- as.integer(k_grid)
   if (!length(k_grid)) stop("k_grid is empty.")
   if (!is.function(solver_factory)) stop("solver_factory must be a function(T_in) -> compute_weights_fn.")
+  frequency <- match.arg(frequency)
+  align_oos <- match.arg(align_oos)
 
   if (!is.null(out_dir) && is.null(stem_base)) {
     stop("If out_dir is provided, stem_base must also be provided.")
   }
 
+  T_in_max <- max(T_in_grid)
+  if (T_in_max >= T0_full) stop(sprintf("max(T_in_grid)=%d must be < T0=%d.", T_in_max, T0_full))
+
   summaries <- list()
   labels <- character(0)
-
   paths_by_Tin <- if (isTRUE(return_paths)) list() else NULL
 
+  # build full rf vector once (or NULL) and then subset as needed
+  rf_full <- .sps_as_rf_vec(rf, T0_full)
+
   for (T_in in T_in_grid) {
-    if (T_in >= T0) {
-      if (isTRUE(verbose)) warning(sprintf("Skipping T_in=%d (>= T0=%d).", T_in, T0))
+
+    # ---- enforce common OOS window from the end, if requested ----
+    if (align_oos == "end") {
+      drop0 <- as.integer(T_in_max - T_in)      # >= 0
+      idx <- seq.int(drop0 + 1L, T0_full)       # keeps the last T0_full - drop0 obs
+
+      R_use <- R_excess[idx, , drop = FALSE]
+      rf_use <- if (is.null(rf_full)) NULL else rf_full[idx]
+    } else {
+      R_use <- R_excess
+      rf_use <- rf_full
+    }
+
+    T0_use <- nrow(R_use)
+
+    if (T_in >= T0_use) {
+      if (isTRUE(verbose)) warning(sprintf("Skipping T_in=%d (>= T0=%d after alignment).", T_in, T0_use))
       next
     }
 
     if (isTRUE(verbose)) {
-      message(sprintf("Running h=1 design: N=%d, T0=%d, T_in=%d, |k_grid|=%d", N, T0, T_in, length(k_grid)))
+      if (align_oos == "end") {
+        message(sprintf(
+          "Running h=1 design (aligned OOS): N=%d, T0_full=%d, T_in=%d, T0_use=%d, |OOS|=%d, |k_grid|=%d",
+          N, T0_full, T_in, T0_use, T0_use - T_in, length(k_grid)
+        ))
+      } else {
+        message(sprintf(
+          "Running h=1 design: N=%d, T0=%d, T_in=%d, |k_grid|=%d",
+          N, T0_use, T_in, length(k_grid)
+        ))
+      }
     }
 
     compute_weights_fn <- solver_factory(T_in)
 
     res <- run_empirical_design_h1(
-      R_excess = R_excess,
-      rf = rf,
+      R_excess = R_use,
+      rf = rf_use,
       T_in = T_in,
       k_grid = k_grid,
       compute_weights_fn = compute_weights_fn,
       annualize = annualize,
+      frequency = frequency,
       return_paths = return_paths,
       ...
     )
@@ -947,12 +1047,14 @@ run_empirical_suite_h1 <- function(R_excess,
   out
 }
 
+
 # =============================================================================
 # Plotting
 # =============================================================================
 
 .plot_metric_by_k <- function(k_grid, mat, labels, ylab,
-                              log_y = FALSE, add_kopt = FALSE, save_path = NULL) {
+                              log_y = FALSE, add_kopt = FALSE,
+                              kopt_mat = NULL, save_path = NULL) {
   if (!requireNamespace("ggplot2", quietly = TRUE)) stop("ggplot2 is required for plotting.")
 
   k_grid <- as.integer(k_grid)
@@ -976,22 +1078,50 @@ run_empirical_suite_h1 <- function(R_excess,
     df$value[!is.finite(df$value) | df$value <= 0] <- NA_real_
   }
 
+  # ---- shapes per "maturity" (i.e., per series/label) ----
+  shape_pool <- c(16, 17, 15, 18, 3, 4, 8, 7, 9, 10, 12, 13, 14)
+  shape_vals <- setNames(rep(shape_pool, length.out = M), labels)
+
+  legend_breaks <- labels
+  shape_override <- shape_vals[legend_breaks]
+  point_size <- 1.8
+
   p <- ggplot2::ggplot(df, ggplot2::aes(x = k, y = value, color = series)) +
     ggplot2::geom_line(linewidth = 1.1, na.rm = TRUE) +
-    ggplot2::geom_point(size = 2.2, na.rm = TRUE) +
+    ggplot2::geom_point(
+      ggplot2::aes(shape = series),
+      size = point_size, na.rm = TRUE
+    ) +
     ggplot2::labs(
       x = "Number of holdings k",
       y = ylab,
       color = if (M > 1) "In-sample window" else NULL
+    ) +
+    ggplot2::scale_shape_manual(values = shape_vals, guide = "none") +
+    ggplot2::guides(
+      color = ggplot2::guide_legend(
+        override.aes = list(
+          shape = unname(shape_override),
+          linetype = 1,
+          linewidth = 1.1,
+          size = point_size
+        )
+      )
     ) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(legend.position = if (M > 1) "bottom" else "none")
 
   if (log_y) p <- p + ggplot2::scale_y_log10()
 
+  # ---- optional k* verticals ----
   if (add_kopt) {
+    kopt_source <- if (is.null(kopt_mat)) mat else as.matrix(kopt_mat)
+
+    if (nrow(kopt_source) != length(k_grid)) stop("nrow(kopt_mat) must equal length(k_grid).")
+    if (ncol(kopt_source) != ncol(mat)) stop("ncol(kopt_mat) must match ncol(mat).")
+
     kopt <- vapply(seq_len(M), function(j) {
-      v <- mat[, j]
+      v <- kopt_source[, j]
       v[!is.finite(v)] <- -Inf
       if (all(v == -Inf)) return(NA_integer_)
       k_grid[which.max(v)[1]]
@@ -1009,15 +1139,12 @@ run_empirical_suite_h1 <- function(R_excess,
       }, numeric(1))
 
       if (log_y) vdf$y_opt[!is.finite(vdf$y_opt) | vdf$y_opt <= 0] <- NA_real_
-
       vdf <- vdf[is.finite(vdf$y_opt), , drop = FALSE]
+
       if (nrow(vdf)) {
-        # Build once to learn the panel's y-axis minimum chosen by ggplot,
-        # then draw a vertical dashed line from that minimum up to y_opt.
         pb <- ggplot2::ggplot_build(p)
         pp <- pb$layout$panel_params[[1]]
         y_min <- if (!is.null(pp$y.range)) pp$y.range[1] else pp$y$range[1]
-
         vdf$y_min <- y_min
 
         p <- p + ggplot2::geom_segment(
@@ -1069,10 +1196,12 @@ plot_empirical_suite_h1 <- function(suite, fig_dir, stem_base) {
     k_grid, suite$mats$sharpe_oos, labels = labels,
     save_path = file.path(fig_dir, paste0(stem_base, "_sr"))
   )
+
   plot_turnover_empirics(
     k_grid, suite$mats$turnover_median, labels = labels,
     save_path = file.path(fig_dir, paste0(stem_base, "_turnover"))
   )
+
   plot_weight_instability_empirics(
     k_grid,
     suite$mats$weight_instability_L1_median,
@@ -1080,6 +1209,7 @@ plot_empirical_suite_h1 <- function(suite, fig_dir, stem_base) {
     labels = labels,
     save_path_base = file.path(fig_dir, paste0(stem_base, "_weight_instability"))
   )
+
   plot_selection_instability_empirics(
     k_grid, suite$mats$selection_instability_mean, labels = labels,
     save_path = file.path(fig_dir, paste0(stem_base, "_selection_instability"))
@@ -1087,6 +1217,7 @@ plot_empirical_suite_h1 <- function(suite, fig_dir, stem_base) {
 
   invisible(TRUE)
 }
+
 
 # =============================================================================
 # Console printing

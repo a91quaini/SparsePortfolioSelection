@@ -11,10 +11,12 @@ run_empirical_suite_h1(
   k_grid,
   solver_factory,
   annualize = TRUE,
+  frequency = c("monthly", "daily"),
   return_paths = FALSE,
   out_dir = NULL,
   stem_base = NULL,
   verbose = TRUE,
+  align_oos = c("none", "end"),
   ...
 )
 }
@@ -24,9 +26,11 @@ run_empirical_suite_h1(
 \item{out_dir}{if not NULL, saves per-T_in CSVs there.}
 
 \item{stem_base}{filename stem (required if out_dir is not NULL).}
+
+\item{align_oos}{if "end", evaluate all T_in over the same OOS window of length T0 - max(T_in_grid)}
 }
 \value{
-list(k_grid, labels, summaries, mats)
+list(k_grid, labels, summaries, mats, checks(, paths))
 }
 \description{
 Run multiple T_in values, save CSVs, and return stacked matrices for plotting
