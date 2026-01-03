@@ -6,7 +6,7 @@
 #       run_empirical_suite_h1(), print_results(), plot_empirical_suite_h1().
 
 ## ---- thread control: must be at the very top ------------------------------
-N_CORES <- 6L
+N_CORES <- 60L
 if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
   RhpcBLASctl::blas_set_num_threads(1)
   RhpcBLASctl::omp_set_num_threads(1)
@@ -25,8 +25,8 @@ N_ASSETS_REQUEST <- 290L   # total currently ~277; will cap automatically
 RNG_SEED <- 12345
 
 T_IN_GRID   <- c(360L, 480L, 600L)  # in-sample window lengths (days)
-ADD_MKT     <- FALSE
-ADD_FACTORS <- FALSE
+ADD_MKT     <- TRUE
+ADD_FACTORS <- TRUE
 
 K_MIN  <- 3L
 K_STEP <- 2L
@@ -34,7 +34,7 @@ K_CAP_REQUEST <- NA_integer_        # NA => cap at N-1
 
 METHOD    <- "lars"
 REFIT     <- FALSE
-NORMALIZE <- FALSE
+NORMALIZE <- TRUE
 
 ANNUALIZE <- FALSE
 FREQUENCY <- "daily"
