@@ -6,7 +6,7 @@
 #       run_empirical_suite_h1(), print_results(), plot_empirical_suite_h1().
 
 ## ---- thread control: must be at the very top ------------------------------
-N_CORES <- 120L
+N_CORES <- 6L
 if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
   RhpcBLASctl::blas_set_num_threads(1)
   RhpcBLASctl::omp_set_num_threads(1)
@@ -34,9 +34,9 @@ K_CAP_REQUEST <- NA_integer_        # NA => cap at N-1
 
 METHOD    <- "lars"
 REFIT     <- FALSE
-NORMALIZE <- TRUE
+NORMALIZE <- FALSE
 
-ANNUALIZE <- TRUE
+ANNUALIZE <- FALSE
 FREQUENCY <- "daily"
 
 OUT_DIR <- file.path("inst", "empirics", "results", "managed_portfolios_daily")
